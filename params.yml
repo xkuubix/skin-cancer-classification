@@ -17,6 +17,10 @@
 # package documentation
 
 # Settings to use, possible settings are listed in the documentation (section "Customizing the extraction").
+
+# #############################  Extracted using PyRadiomics version: <3.1.0>  ######################################
+
+
 setting:
   binWidth: 25
   label: 255
