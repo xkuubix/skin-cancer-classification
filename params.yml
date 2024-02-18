@@ -1,6 +1,5 @@
-# This is an example of a parameters file
+# This is parameters file
 # It is written according to the YAML-convention (www.yaml.org) and is checked by the code for consistency.
-# Three types of parameters are possible and reflected in the structure of the document:
 #
 # Parameter category:
 #   Setting Name: <value>
@@ -13,32 +12,160 @@
 # - imageType: image types to calculate features on. <value> is custom kwarg settings (dictionary). if <value> is an
 #   empty dictionary ('{}'), no custom settings are added for this input image.
 #
-# Some parameters have a limited list of possible values. Where this is the case, possible values are listed in the
-# package documentation
+# 
+#  By default, all features in all feature classes are enabled.
+#  By default, only `Original` input image is enabled (No filter applied).
+#  Available image types are ['Exponential', 'Gradient', 'LBP2D', 'LBP3D', 'LoG', 'Logarithm', 'Original', 'Square',
+#                             'SquareRoot', 'Wavelet']
+#  Available feature classes are ['firstorder', 'glcm', 'gldm', 'glrlm', 'glszm', 'ngtdm', 'shape', 'shape2D']
 
-# Settings to use, possible settings are listed in the documentation (section "Customizing the extraction").
 
+# ###################################################################################################################
 # #############################  Extracted using PyRadiomics version: <3.1.0>  ######################################
+# ###################################################################################################################
 
 
-setting:
-  binWidth: 25
-  label: 255
-  resampledPixelSpacing: # This disables resampling, as it is interpreted as None, to enable it, specify spacing in x, y, z as [x, y , z]
-  weightingNorm: # If no value is specified, it is interpreted as None
+setting: #-----------------------------------------------------------------------------------------------------------
+  # If no value is specified, it is interpreted as None
+  #                           # [Default]
 
-# Image types to use: "Original" for unfiltered image, for possible filters, see documentation.
-imageType:
-  Original: {} # for dictionaries / mappings, None values are not allowed, '{}' is interpreted as an empty dictionary
 
-# Featureclasses, from which features must be calculated. If a featureclass is not mentioned, no features are calculated
-# for that class. Otherwise, the specified features are calculated, or, if none are specified, all are calculated (excluding redundant/deprecated features).
-featureClass:
-  # redundant Compactness 1, Compactness 2 an Spherical Disproportion features are disabled by default, they can be
-  # enabled by specifying individual feature names (as is done for glcm) and including them in the list.
-  shape2D:
-  firstorder: [] # specifying an empty list has the same effect as specifying nothing.
-  glcm:  [] # Disable SumAverage by specifying all other GLCM features available
-  glrlm: [] # for lists none values are allowed, in this case, all features are enabled
-  glszm: []
-  gldm: []  # contains deprecated features, but as no individual features are specified, the deprecated features are not enabled
+
+# ============= Feature Extractor Level =============
+
+# Image Normalization
+  # normalize:                # [False]: Boolean, set to True to enable normalizing of the image before any resampling.
+  # normalizeScale:           # [1]: Float, > 0, determines the scale after normalizing the image. If normalizing is disabled, this has no effect.
+  # removeOutliers:           # [None]: Float, > 0, defines the outliers to remove from the image. An outlier is defined as values that differ more than nσ_x from the mean, where n>0 and equal to the value of this setting.
+  
+  
+# Resampling the image/mask
+  # resampledPixelSpacing:    # [None]: List of 3 floats (>= 0), sets the size of the voxel in (x, y, z) plane when resampling. This disables resampling, as it is interpreted as None, to enable it, specify spacing in x, y, z as [x, y , z]
+  # interpolator:             # [sitkBSpline]: SimpleITK constant or string name thereof, sets interpolator to use for resampling. The choice of interpolator is only applied to resampling images, while sitkNearestNeighbor is always used for resampling masks in order to preserve label values.
+  # padDistance:              # [5]: Integer, ≥0, set the number of voxels pad cropped tumor volume with during resampling.
+
+# Pre-Cropping
+  # preCrop:                  # [False]: Boolean, if true and resampling is disabled, crops the image onto the bounding box with additional padding as specified in padDistance
+
+# Resegmentation
+  # resegmentRange:           # [None]: List of 1 or 2 floats, specifies the lower and and optionally upper threshold, respectively. 
+  # resegmentMode:            # ['absolute']: string, specifying the method to use for defining the resegmentation thresholds
+  # resegmentShape:           # [False]: Boolean, if set to True, the resegmented mask is also used for shape calculation. If set to False (default), only first order and texture classes are calculated using the resegmented mask (known in IBSI as the intensity mask).
+
+# Mask validation
+  # minimumROIDimensions:     # [2]: Integer, range 1-3, specifies the minimum dimensions (1D, 2D or 3D, respectively). Single-voxel segmentations are always excluded.
+  # minimumROISize:           # [None] Integer, > 0, specifies the minimum number of voxels required. Test is skipped if this parameter is omitted (specifying it as None in the parameter file will throw an error).
+  # geometryTolerance:        # [None]: Float, determines the tolarance used by SimpleITK to compare origin, direction and spacing between image and mask. Affects the fist step in checkMask(). If set to None, PyRadiomics will use SimpleITK default (1e-16).
+  # correctMask:              # [False]: Boolean, if set to true, PyRadiomics will attempt to resample the mask to the image geometry when the first step in checkMask() fails. This uses a nearest neighbor interpolator. Mask check will still fail if the ROI defined in the mask includes areas outside of the image physical space.
+  
+# Miscellaneous
+  additionalInfo: False     # [True]: boolean, set to False to disable inclusion of additional information on the extraction in the output.
+
+
+
+# ============= Filter Level =============
+
+# Laplacian of Gaussian settings
+  # sigma:                    # List of floats or integers, must be greater than 0. Sigma values to use for the filter (determines coarseness). Setting for sigma must be provided if LoG filter is enabled
+
+# Wavelet settings
+  # start_level:              # [0]: integer, 0 based level of wavelet which should be used as first set of decompositions from which a signature is calculated
+  # level:                    # [1]: integer, number of levels of wavelet decompositions from which a signature is calculated.
+  # wavelet:                  # [“coif1”]: string, type of wavelet decomposition. Enumerated value, validated against possible values present in the pyWavelet.wavelist()
+
+# Gradient settings
+  # gradientUseSpacing:       # [True]: Boolean, if true, image spacing is taken into account when computing the gradient magnitude in the image.
+
+# Local Binary Pattern 2D
+  # lbp2DRadius:              # [1]: Float, > 0, specifies the radius in which the neighbours should be sampled
+  # lbp2DSamples:             # [9]: Integer, ≥1 , specifies the number of samples to use
+  # lbp2DMethod:              # [‘uniform’]: String, specifies the method for computing the LBP to use.
+
+# Local Binary Pattern 3D
+  # lbp3DLevels:              # [2]: integer, ≥1, specifies the the number of levels in spherical harmonics to use.
+  # lbp3DIcosphereRadius:     # [1]: Float, > 0, specifies the radius in which the neighbours should be sampled
+  # lbp3DIcosphereSubdivision:# [1]: Integer, ≥0, specifies the number of subdivisions to apply in the icosphere
+
+
+
+# ============= Feature Class Level =============
+ 
+  label: 255                #[1]: Integer, label value of Region of Interest (ROI) in labelmap.
+
+# Image discretization
+  binWidth: 25            # [25]: Float, > 0, size of the bins when making a histogram and for discretization of the image gray level.
+  # binCount:               # [None]: integer, > 0, specifies the number of bins to create. The width of the bin is then determined by the range in the ROI. No definitive evidence is available on which method of discretization is superior, we advise a fixed bin width.
+
+# Forced 2D extraction
+  # force2D:                # [False]: Boolean, set to true to force a by slice texture calculation. Dimension that identifies the ‘slice’ can be defined in force2Ddimension. If input ROI is already a 2D ROI, features are automatically extracted in 2D.
+  # force2Ddimension:       # [0]: int, range 0-2. Specifies the ‘slice’ dimension for a by-slice feature extraction. A value of 0 represents the native acquisition plane for the images (usually axial for CT and axial, coronal or sagittal for MRI). Similarly, 1 identifies the out-of plane y dimension (e.g. coronal plane for an axial image) and 2 the out-of-plane x dimension (e.g. sagittal plane for an acial image). if force2D is set to False, this parameter has no effect.
+
+# Texture matrix weighting
+  # T h i s   o n l y   a f f e c t s   t h e   GLCM   a n d   GLRLM   f e a t u r e   c l a s s e s.
+  # weightingNorm:          # [None]: string, indicates which norm should be used when applying distance weighting. None: Applies no weighting, mean of values calculated on separate matrices is returned;‘manhattan’: first order norm;‘euclidean’: second order norm;‘infinity’: infinity norm.;‘no_weighting’: GLCMs are weighted by factor 1 and summed;
+
+# Distance to neighbour
+  # T h i s   o n l y   a f f e c t s   t h e   GLCM   a n d   NGTDM   f e a t u r e   c l a s s e s.  
+  # distances:              # [[1]]: List of integers. This specifies the distances between the center voxel and the neighbor, for which angles should be generated.
+
+
+
+# ============= Feature Class Specific Settings =============
+
+# First Order
+  # voxelArrayShift:        # [0]: Integer, This amount is added to the gray level intensity in features Energy, Total Energy and RMS, this is to prevent negative values. If using CT data, or data normalized with mean 0, consider setting this parameter to a fixed value (e.g. 2000) that ensures non-negative numbers in the image. Bear in mind however, that the larger the value, the larger the volume confounding effect will be.
+
+# GLCM
+  # symmetricalGLCM:        # [True]: boolean, indicates whether co-occurrences should be assessed in two directions per angle, which results in a symmetrical matrix, with equal distributions for i and j. A symmetrical matrix corresponds to the GLCM as defined by Haralick et al.
+
+# GLDM
+  # gldm_a:                 # [0]: float, α cutoff value for dependence. A neighbouring voxel with gray level j is considered dependent on center voxel with gray level i if |i−j|≤α
+
+
+
+# ============= Voxel-based specific settings =============
+
+  # kernelRadius:           # [1]: integer, specifies the size of the kernel to use as the radius from the center voxel.  Therefore the actual size is 2 * kernelRadius + 1. E.g. a value of 1 yields a 3x3x3 kernel, a value of 2 5x5x5, etc. In case of 2D extraction, the generated kernel will also be a 2D shape (square instead of cube).
+  # maskedKernel:           # [True]: boolean, specifies whether to mask the kernel with the overall mask. If True, only voxels in the kernel that are also segmented in the mask are used for calculation. Otherwise, all voxels inside the kernel are used. Moreover, gray value discretization is performed over the ROI if the setting is set to True, and over the entire image if False.
+  # initValue:              # [0]: float, value to use for voxels outside the ROI, or voxels where calculation failed. If set to nan, 3D slicer will treat them as transparent voxels
+  # voxelBatch:             # [-1]: integer > 0, this value controls the maximum number of voxels that are calculated in one batch. Larger batches mean less loops in Python and therefore a quicker extraction, but do require more memory. This setting allows the user to compromise between extraction speed and memory usage. When providing this setting, the value is constrained to be > 0, only by not providing it is the default value of -1 used (which means: all voxels in 1 batch).
+
+
+
+imageType: #---------------------------------------------------------------------------------------------------------
+           # [None] values are not allowed, '{}' is interpreted as an empty dictionary
+  Original: {}          # No filter applied
+  # Wavelet: {}           # Wavelet filtering
+  # LoG: {}               # Laplacian of Gaussian filter
+  # Square: {}            # Takes the square of the image intensities and linearly scales them back to the original range.
+  # SquareRoot: {}        # Takes the square root of the absolute image intensities and scales them back to original range.
+  # Logarithm: {}         # Takes the logarithm of the absolute intensity + 1.
+  # Exponential: {}       # Takes the the exponential, where filtered intensity is e^(absolute intensity).
+  # Gradient: {}          # Returns the magnitude of the local gradient.
+  # LBP2D: {}             # Computes the Local Binary Pattern in a by-slice operation (2D).
+  # LBP3D: {}             # Computes the Local Binary Pattern in 3D using spherical harmonics.
+
+
+
+featureClass: #------------------------------------------------------------------------------------------------------
+              # Featureclasses, from which features must be calculated.
+              # If a featureclass is not mentioned, no features are calculated for that class.
+              # Otherwise, the specified features are calculated, or, if none are specified, all are calculated
+              # (excluding redundant/deprecated features).
+              # These are the features that are extracted from each (original and/or derived) image type.
+              # redundant Compactness 1, Compactness 2 an Spherical Disproportion features are disabled by default,
+              # they can be enabled by specifying individual feature names and including them in the list.
+  
+# An individual feature can be enabled by submitting the feature name as defined in the unique part of the function signature
+# (e.g. the First Order feature defined by get10PercentileFeatureValue() is enabled by specifying firstorder: ['10Percentile']  ).
+
+
+  firstorder: []  # First Order Statistics (19 features   [18 default + STD excluded cuz correlated with VAR])
+  shape2D: []     # Shape-based (2D) (10 features default [ 9 default +  Spherical Disproportion excluded cuz correlated with Sphericity])
+  # shape: []       # Shape-based (3D) (16 features)
+  glcm:  []       # Gray Level Co-occurrence Matrix (24 features)
+  gldm: []        # Gray Level Dependence Matrix (14 features)
+  glrlm: []       # Gray Level Run Length Matrix (16 features)
+  glszm: []       # Gray Level Size Zone Matrix (16 features)
+  ngtdm: []       # Neighbouring Gray Tone Difference Matrix (5 features)
+
