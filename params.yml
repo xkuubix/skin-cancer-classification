@@ -97,7 +97,7 @@ setting: #----------------------------------------------------------------------
   # binCount:               # [None]: integer, > 0, specifies the number of bins to create. The width of the bin is then determined by the range in the ROI. No definitive evidence is available on which method of discretization is superior, we advise a fixed bin width.
 
 # Forced 2D extraction
-  # force2D:                # [False]: Boolean, set to true to force a by slice texture calculation. Dimension that identifies the ‘slice’ can be defined in force2Ddimension. If input ROI is already a 2D ROI, features are automatically extracted in 2D.
+  force2D: True                # [False]: Boolean, set to true to force a by slice texture calculation. Dimension that identifies the ‘slice’ can be defined in force2Ddimension. If input ROI is already a 2D ROI, features are automatically extracted in 2D.
   # force2Ddimension:       # [0]: int, range 0-2. Specifies the ‘slice’ dimension for a by-slice feature extraction. A value of 0 represents the native acquisition plane for the images (usually axial for CT and axial, coronal or sagittal for MRI). Similarly, 1 identifies the out-of plane y dimension (e.g. coronal plane for an axial image) and 2 the out-of-plane x dimension (e.g. sagittal plane for an acial image). if force2D is set to False, this parameter has no effect.
 
 # Texture matrix weighting
@@ -116,7 +116,7 @@ setting: #----------------------------------------------------------------------
   # voxelArrayShift:        # [0]: Integer, This amount is added to the gray level intensity in features Energy, Total Energy and RMS, this is to prevent negative values. If using CT data, or data normalized with mean 0, consider setting this parameter to a fixed value (e.g. 2000) that ensures non-negative numbers in the image. Bear in mind however, that the larger the value, the larger the volume confounding effect will be.
 
 # GLCM
-  # symmetricalGLCM:        # [True]: boolean, indicates whether co-occurrences should be assessed in two directions per angle, which results in a symmetrical matrix, with equal distributions for i and j. A symmetrical matrix corresponds to the GLCM as defined by Haralick et al.
+  symmetricalGLCM: True         # [True]: boolean, indicates whether co-occurrences should be assessed in two directions per angle, which results in a symmetrical matrix, with equal distributions for i and j. A symmetrical matrix corresponds to the GLCM as defined by Haralick et al.
 
 # GLDM
   # gldm_a:                 # [0]: float, α cutoff value for dependence. A neighbouring voxel with gray level j is considered dependent on center voxel with gray level i if |i−j|≤α
