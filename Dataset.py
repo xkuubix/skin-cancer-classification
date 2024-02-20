@@ -11,21 +11,15 @@ logger = logging.getLogger(__name__)
 
 
 class HAM10000(Dataset):
-    def __init__(self, pth: typing.Union[str, bytes, os.PathLike],
+    def __init__(self,
+                 df: pd.DataFrame,
                  transform=None):
-        logging.debug('Initialising dataset')
-
-        for root, _, files in os.walk(pth):
-            for file in files:
-                if 'metadata' in file:
-                    self.df = pd.read_csv(os.path.join(root, file))
-                    logging.debug("Metadata has been loaded.")
-                else:
-                    raise NotImplementedError
-        self.pth = pth
+        logger.debug('Initialising dataset')
+        
+        self.df = df
         self.transform = transform
 
-        logging.debug('Finished initialising dataset')
+        logger.debug('Finished initialising dataset')
 
     def __getitem__(self, index):
         
