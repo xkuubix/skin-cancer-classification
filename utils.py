@@ -18,7 +18,7 @@ def group_df(df: pd.DataFrame):
                     "localization": list,
                     "dataset": list
                     })
-    logger.debug("Grouped same ID dataframe cells, len(df) = " +\
+    logger.info("Grouped same ID dataframe cells, len(df) = " +\
                     str(len(df)))
     return df.reset_index()
 
@@ -35,7 +35,24 @@ def ungroup_df(df: pd.DataFrame):
         'dataset': row['dataset'],
     }) for _, row in df.iterrows()], ignore_index=True)
 
+    logger.info("Ungrouped dataframe cells by lesion_id")
+
     return new_df
+
+def insert_paths_df(df: pd.DataFrame,
+                    img_path: typing.Union[str, bytes, os.PathLike],
+                    seg_path: typing.Union[str, bytes, os.PathLike]):
+    logger.info("Inserting (2) paths to dataframe, len(df.columns) = " +\
+                 str(len(df.columns)))
+    
+    df.insert(2, 'img_path', None)
+    df.insert(3, 'seg_path', None)
+    df['img_path'] = img_path + df['image_id'] + '.jpg'
+    df['seg_path'] = seg_path + df['image_id'] + '_segmentation.png'
+    
+    logger.info("Inserted (2) paths to dataframe, len(df.columns) = " +\
+                str(len(df.columns)))
+    return df
 
 def get_args_parser(path: typing.Union[str, bytes, os.PathLike]):
     help = '''path to .yml config file
@@ -46,15 +63,3 @@ def get_args_parser(path: typing.Union[str, bytes, os.PathLike]):
                         default=path,
                         help=help)
     return parser
-
-# img_pth: typing.Union[str, bytes, os.PathLike],
-# seg_pth: typing.Union[str, bytes, os.PathLike],
-# csv_pth: typing.Union[str, bytes, os.PathLike],
-
-# if os.path.exists(csv_pth):
-#     df = pd.read_csv(csv_pth)
-# else:
-#     raise FileNotFoundError
-
-# logger.debug("Metadata has been loaded, len(df) = " +\
-#                 str(len(df)))
