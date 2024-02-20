@@ -14,18 +14,20 @@ class HAM10000(Dataset):
     def __init__(self,
                  df: pd.DataFrame,
                  transform=None):
-        logger.debug('Initialising dataset')
+        logger.info('Initialising ...')
         
         self.df = df
         self.transform = transform
-
-        logger.debug('Finished initialising dataset')
+        self.mapping_handler = MappingHandler()
+        logger.info('Finished initialising')
 
     def __getitem__(self, index):
         
-        image = Image.open(self.df['image_path'][index])
-        mask = Image.open(self.df['mask_path'][index])
-        label = torch.tensor(int(self.df['cell_type_idx'][index]))
+        # Load images from paths, map label
+        image = Image.open(self.df.iloc[index]['img_path'])
+        mask = Image.open(self.df.iloc[index]['seg_path'])
+        label = self.df.iloc[index]['dx']
+        label = torch.tensor(self.mapping_handler.convert(label))
 
         if self.transform:
             image = self.transform(image)
@@ -35,3 +37,33 @@ class HAM10000(Dataset):
     
     def __len__(self):
         return len(self.df)
+
+
+class MappingHandler:
+    def __init__(self):
+        self.mapping = {
+            "MEL": 0,
+            "NV": 1,
+            "BCC": 2,
+            "AKIEC": 3,
+            "BKL": 4,
+            "DF": 5,
+            "VASC": 6
+            }
+
+    def convert(self, arg):
+        if type(arg) == str:
+            arg = arg.upper()
+        if arg in self.mapping:
+            # Argument is a key, return the corresponding value
+            logger.info('Label converted [key->value]')
+            return self.mapping[arg]
+        elif arg in set(self.mapping.values()):
+            # Argument is a value, return the corresponding key
+            for k, v in self.mapping.items():
+                if v == arg:
+                    logger.info('Label converted [value->key]')
+                    return k
+
+        else:
+            raise ValueError("Invalid key or value")
