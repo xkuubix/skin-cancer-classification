@@ -1,0 +1,12 @@
+seed: 42
+
+dirs:
+  seg_path:   '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_segmentations/'
+  img_path:   '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_images/'
+  csv_path:   '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_metadata'
+
+dataset:
+  split_fraction_train_rest: 0.75
+  split_fraction_val_test: 0.5
+
+
