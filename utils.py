@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 def group_df(df: pd.DataFrame):
     # df = df.sort_values(by=['image_id'])
+    old_len = len(df)
     df = df.groupby('lesion_id')
     df = df.agg({
                     "image_id": list,
@@ -18,12 +19,13 @@ def group_df(df: pd.DataFrame):
                     "localization": list,
                     "dataset": list
                     })
-    logger.info("Grouped same ID dataframe cells, len(df) = " +\
-                    str(len(df)))
+    logger.info("Grouped same ID (lesion_id) dataframe cells, " +\
+                f"old length = {old_len} => new length = {str(len(df))}")
     return df.reset_index()
 
 
 def ungroup_df(df: pd.DataFrame):
+    old_len = len(df)
     new_df = pd.concat([pd.DataFrame({
         'lesion_id': [row['lesion_id']] * len(row['image_id']),
         'image_id': row['image_id'],
@@ -35,8 +37,8 @@ def ungroup_df(df: pd.DataFrame):
         'dataset': row['dataset'],
     }) for _, row in df.iterrows()], ignore_index=True)
 
-    logger.info("Ungrouped dataframe cells by lesion_id")
-
+    logger.info("Ungrouped dataframe cells by lesion_id, " +\
+                f"old length = {old_len} => new length = {str(len(new_df))}")
     return new_df
 
 def insert_paths_df(df: pd.DataFrame,
@@ -54,6 +56,19 @@ def insert_paths_df(df: pd.DataFrame,
                 str(len(df.columns)))
     return df
 
+def random_split_df(df: pd.DataFrame,
+                    train_rest_frac, val_test_frac,
+                    seed) -> tuple:
+
+    # print('\n seed = ', seed)
+    train = df.sample(frac=train_rest_frac, random_state=seed)
+    x = df.drop(train.index)
+    val = x.sample(frac=val_test_frac, random_state=seed)
+    test = x.drop(val.index)
+    logger.info(f"Splitted data into | train-val-test | {len(train)}-{len(val)}-{len(test)} | " +\
+                f"{len(train)/len(df)*100:.2f}%-{len(val)/len(df)*100:.2f}%-{len(test)/len(df)*100:.2f}% |")
+    return train, val, test
+
 def get_args_parser(path: typing.Union[str, bytes, os.PathLike]):
     help = '''path to .yml config file
     specyfying datasets/training params'''
@@ -63,3 +78,19 @@ def get_args_parser(path: typing.Union[str, bytes, os.PathLike]):
                         default=path,
                         help=help)
     return parser
+
+   
+def pretty_print_dict(d):
+    #take empty string
+    sorted_list = sorted(d.items())
+    sorted_dict = {}
+    for key, value in sorted_list:
+        sorted_dict[key] = value
+    pretty_dict = ''  
+     
+    #get items for dict
+    for k, v in sorted_dict.items():
+        pretty_dict += f'\n\t{k}:\t{v}'
+    #return result
+    return pretty_dict
+ 
