@@ -5,7 +5,9 @@ import logging
 import torch
 import pandas as pd
 from PIL import Image
+from collections import Counter
 from torch.utils.data import Dataset
+from utils import pretty_print_dict
 
 logger = logging.getLogger(__name__)
 
@@ -16,27 +18,30 @@ class HAM10000(Dataset):
                  transform=None):
         logger.info('Initialising ...')
         
-        self.df = df
-        self.transform = transform
+        self._df = df
+        self._transform = transform
         self.mapping_handler = MappingHandler()
-        logger.info('Finished initialising')
+        msg = 'Finished initialising - class distribution:'
+        msg += pretty_print_dict(Counter(self._df['dx']))
+
+        logger.info(msg)
 
     def __getitem__(self, index):
         
         # Load images from paths, map label
-        image = Image.open(self.df.iloc[index]['img_path'])
-        mask = Image.open(self.df.iloc[index]['seg_path'])
-        label = self.df.iloc[index]['dx']
+        image = Image.open(self._df.iloc[index]['img_path'])
+        mask = Image.open(self._df.iloc[index]['seg_path'])
+        label = self._df.iloc[index]['dx']
         label = torch.tensor(self.mapping_handler.convert(label))
 
-        if self.transform:
-            image = self.transform(image)
-            mask = self.transform(mask)
+        if self._transform:
+            image = self._transform(image)
+            mask = self._transform(mask)
 
         return image, mask, label
     
     def __len__(self):
-        return len(self.df)
+        return len(self._df)
 
 
 class MappingHandler:
