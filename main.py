@@ -2,7 +2,7 @@
 import yaml
 
 from radiomics import featureextractor
-# import SimpleITK as sitk
+import SimpleITK as sitk
 # import matplotlib.pyplot as plt
 import torch
 import numpy as np
@@ -45,20 +45,13 @@ train_ds = HAM10000(df=train_df, transform=transform)
 val_ds = HAM10000(df=val_df, transform=transform)
 test_ds = HAM10000(df=test_df, transform=transform)
 # %% RADIOMICS FEATURES EXTRACTION [ON-LINE OFF-LINE?]
-
-
-# extractor = featureextractor.RadiomicsFeatureExtractor('params.yml')
-# results = extractor.execute(im, ma_path, label=label)
-
-# %%
-# Set path to mask
-label = 255  # Change this if the ROI in your mask is identified by a different value
+extractor = featureextractor.RadiomicsFeatureExtractor('params.yml')
+label = 255
+im = sitk.ReadImage(train_ds[0]['img_path'])
 color_channel = 0
-# im = sitk.ReadImage(im_path)
-# selector = sitk.VectorIndexSelectionCastImageFilter()
-# selector.SetIndex(color_channel)
-# im = selector.Execute(im)
-
-
+selector = sitk.VectorIndexSelectionCastImageFilter()
+selector.SetIndex(color_channel)
+im = selector.Execute(im)
+results = extractor.execute(im, train_ds[0]['seg_path'], label=label)
 
 # %%
