@@ -1,20 +1,19 @@
-# %%
+# %% IMPORTS AND SETTINGS
 import yaml
 
 from radiomics import featureextractor
 # import SimpleITK as sitk
-# import matplotlib.image as mpimg
 # import matplotlib.pyplot as plt
-
-# import numpy as np
+import torch
+import numpy as np
 import pandas as pd
 import utils
 
 import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 from Dataset import HAM10000
+logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger(__name__)
 
 
 # MAKE PARSER AND LOAD PARAMS FROM CONFIG FILE--------------------------------
@@ -23,38 +22,40 @@ args, unknown = parser.parse_known_args()
 with open(args.config_path) as file:
     config = yaml.load(file, Loader=yaml.FullLoader)
 
-# %%
+# SET FIXED SEED FOR REPRODUCIBILITY --------------------------------
+seed = config['seed']
+np.random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+# %% DATA LOADING - 3-SET-SPLIT
 df = pd.read_csv(config['dir']['csv'])
-df = utils.insert_paths_df(df, config['dir']['img'], config['dir']['seg'])
-# %%
-dataset = HAM10000(df=df, transform=None)
-# %%
-# Read Images
-# mask = mpimg.imread(ma_path,)
-# mask = mask.astype(np.uint8)
-# masked = masked = np.ma.masked_where(mask == 0, mask)
+df = utils.group_df(df)
+train_df, val_df, test_df = utils.random_split_df(df,
+                                                  config['dataset']['split_fraction_train_rest'],
+                                                  config['dataset']['split_fraction_val_test'],
+                                                  seed=seed)
+train_df = utils.ungroup_df(train_df)
+val_df = utils.ungroup_df(val_df)
+test_df = utils.ungroup_df(test_df)
 
-# img = mpimg.imread(im_path)
- 
-# Output Images
-# fig, ax = plt.subplots(1,1)
-# ax.imshow(img)
-# ax.imshow(masked, alpha=0.25, cmap='winter')
+train_df = utils.insert_paths_df(train_df, config['dir']['img'], config['dir']['seg'])
+val_df = utils.insert_paths_df(val_df, config['dir']['img'], config['dir']['seg'])
+test_df = utils.insert_paths_df(test_df, config['dir']['img'], config['dir']['seg'])
 
-# Instantiate extractor with parameter file
-extractor = featureextractor.RadiomicsFeatureExtractor('params.yml')
-# print("\nsettings")
-# for key, value in extractor.settings.items():
-#     print(f"{key}: {value}")
-# print("\nenabled features")
-# for key, value in extractor.enabledFeatures.items():
-#     print(f"{key}: {value}")
+# %%
+transform = None
+train_ds = HAM10000(df=train_df, transform=transform)
+val_ds = HAM10000(df=val_df, transform=transform)
+test_ds = HAM10000(df=test_df, transform=transform)
+# %% RADIOMICS FEATURES EXTRACTION [ON-LINE OFF-LINE?]
+
+
+# extractor = featureextractor.RadiomicsFeatureExtractor('params.yml')
+# results = extractor.execute(im, ma_path, label=label)
 
 # %%
 # Set path to mask
 label = 255  # Change this if the ROI in your mask is identified by a different value
-
-# Load the image and extract a color channel
 color_channel = 0
 # im = sitk.ReadImage(im_path)
 # selector = sitk.VectorIndexSelectionCastImageFilter()
@@ -62,13 +63,5 @@ color_channel = 0
 # im = selector.Execute(im)
 
 
-# Run the extractor
-# results = extractor.execute(im, ma_path, label=label)
-result = {}
 
-# for key in results.keys():
-#     result[key] = [results[key]]
-#     # print(results[key])
-# df = pd.DataFrame(result)
-# # df.columns
 # %%
