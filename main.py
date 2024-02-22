@@ -11,10 +11,12 @@ import utils
 
 import logging
 from Dataset import HAM10000
-logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
+logger_radiomics = logging.getLogger("radiomics")
+logger_radiomics.setLevel(logging.ERROR)
 
 # MAKE PARSER AND LOAD PARAMS FROM CONFIG FILE--------------------------------
 parser = utils.get_args_parser('config.yml')
