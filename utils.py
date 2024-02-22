@@ -12,6 +12,8 @@ def group_df(df: pd.DataFrame):
     df = df.groupby('lesion_id')
     df = df.agg({
                     "image_id": list,
+                    "img_path": list,
+                    "seg_path": list,
                     "dx": 'first',
                     "dx_type": 'first',
                     "age": 'first',
@@ -29,6 +31,8 @@ def ungroup_df(df: pd.DataFrame):
     new_df = pd.concat([pd.DataFrame({
         'lesion_id': [row['lesion_id']] * len(row['image_id']),
         'image_id': row['image_id'],
+        'img_path': row['img_path'],
+        'seg_path': row['seg_path'],
         'dx': [row['dx']] * len(row['image_id']),
         'dx_type': [row['dx_type']] * len(row['image_id']),
         'age': [row['age']] * len(row['image_id']),
