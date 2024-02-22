@@ -29,7 +29,9 @@ torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 # %% DATA LOADING - 3-SET-SPLIT
 df = pd.read_csv(config['dir']['csv'])
+df = utils.insert_paths_df(df, config['dir']['img'], config['dir']['seg'])
 df = utils.group_df(df)
+
 train_df, val_df, test_df = utils.random_split_df(df,
                                                   config['dataset']['split_fraction_train_rest'],
                                                   config['dataset']['split_fraction_val_test'],
@@ -37,11 +39,6 @@ train_df, val_df, test_df = utils.random_split_df(df,
 train_df = utils.ungroup_df(train_df)
 val_df = utils.ungroup_df(val_df)
 test_df = utils.ungroup_df(test_df)
-
-train_df = utils.insert_paths_df(train_df, config['dir']['img'], config['dir']['seg'])
-val_df = utils.insert_paths_df(val_df, config['dir']['img'], config['dir']['seg'])
-test_df = utils.insert_paths_df(test_df, config['dir']['img'], config['dir']['seg'])
-
 # %%
 transform = None
 train_ds = HAM10000(df=train_df, transform=transform)
