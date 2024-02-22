@@ -29,16 +29,29 @@ class HAM10000(Dataset):
     def __getitem__(self, index):
         
         # Load images from paths, map label
-        image = Image.open(self._df.iloc[index]['img_path'])
-        mask = Image.open(self._df.iloc[index]['seg_path'])
-        label = self._df.iloc[index]['dx']
-        label = torch.tensor(self.mapping_handler.convert(label))
+        image_path = self._df.iloc[index]['img_path']
+        segmentation_path = self._df.iloc[index]['seg_path']
+
+        image = Image.open(image_path)
+        mask = Image.open(segmentation_path)
+
+        label_str = self._df.iloc[index]['dx']
+        label = torch.tensor(self.mapping_handler.convert(label_str))
 
         if self._transform:
             image = self._transform(image)
             mask = self._transform(mask)
 
-        return image, mask, label
+        data_dict = {
+            'image': image,
+            'mask': mask,
+            'label': label,
+            'img_path': image_path,
+            'seg_path': segmentation_path,
+            'label_str': label_str
+            }
+
+        return data_dict
     
     def __len__(self):
         return len(self._df)
