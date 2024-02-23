@@ -74,13 +74,13 @@ class MappingHandler:
             arg = arg.upper()
         if arg in self.mapping:
             # Argument is a key, return the corresponding value
-            logger.info('Label converted [key->value]')
+            logger.info(f'Label converted [key->value] [{arg}->{self.mapping[arg]}]')
             return self.mapping[arg]
         elif arg in set(self.mapping.values()):
             # Argument is a value, return the corresponding key
             for k, v in self.mapping.items():
                 if v == arg:
-                    logger.info('Label converted [value->key]')
+                    logger.info(f'Label converted [value->key] [{k}->{v}]')
                     return k
 
         else:
