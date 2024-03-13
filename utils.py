@@ -84,7 +84,7 @@ def get_args_parser(path: typing.Union[str, bytes, os.PathLike]):
     return parser
 
    
-def pretty_print_dict(d):
+def pretty_print_dict(d, key_only=False):
     #take empty string
     sorted_list = sorted(d.items())
     sorted_dict = {}
@@ -93,8 +93,12 @@ def pretty_print_dict(d):
     pretty_dict = ''  
      
     #get items for dict
-    for k, v in sorted_dict.items():
-        pretty_dict += f'\n\t{k}:\t{v}'
-    #return result
+    if key_only:
+        for k, _ in sorted_dict.items():
+            pretty_dict += f'\n\t{k}'
+    else:
+        for k, v in sorted_dict.items():
+            pretty_dict += f'\n\t{k}:\t{v}'
+        #return result
     return pretty_dict
  
