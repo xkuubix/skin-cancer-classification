@@ -6,10 +6,16 @@ from multiprocessing import Pool
 import logging
 logger = logging.getLogger(__name__)
 from tqdm import tqdm, trange
+from utils import pretty_print_dict
 
 class RadiomicsExtractor():
     def  __init__(self, param_file: str):
         self.extractor = featureextractor.RadiomicsFeatureExtractor(param_file)
+        msg = "\n\nEnabled Image Types:"
+        msg += pretty_print_dict(self.extractor.enabledImagetypes, key_only=True)
+        msg += "\n\nEnabled Features:"
+        msg += pretty_print_dict(self.extractor.enabledFeatures, key_only=True)
+        logger.info(msg)
 
     
     def extract_radiomics(self, d:dict, label=255, color_channel=0):
