@@ -24,23 +24,41 @@ class RadiomicsExtractor():
         serial_extraction: Performs serial extraction of radiomics features from a list of images.
     """
 
-    def  __init__(self, param_file: str):
+    def  __init__(self, param_file: str, transforms=None):
         self.extractor = featureextractor.RadiomicsFeatureExtractor(param_file)
         msg = "\n\nEnabled Image Types:"
         msg += pretty_dict_str(self.extractor.enabledImagetypes, key_only=True)
         msg += "\n\nEnabled Features:"
         msg += pretty_dict_str(self.extractor.enabledFeatures, key_only=True)
         logger.info(msg)
+        self.transforms = transforms
     
+    def get_enabled_image_types(self):
+        return list(self.extractor.enabledImagetypes.keys())
+    
+    def get_enabled_features(self):
+        return list(self.extractor.enabledFeatures.keys())
+
     def extract_radiomics(self, d:dict, label=255, color_channel=0):
         img_path = d['img_path']
         seg_path = d['seg_path']
         # tutaj augmentacje
         im = sitk.ReadImage(img_path)
-        if im.GetNumberOfComponentsPerPixel() > 1:
-            selector = sitk.VectorIndexSelectionCastImageFilter()
-            selector.SetIndex(color_channel)
-            im = selector.Execute(im)
+        sg = sitk.ReadImage(seg_path)
+        if self.transforms:
+            im = sitk.GetArrayFromImage(im)
+            sg = sitk.GetArrayFromImage(sg)
+            transformed = self.transforms(image=im, mask=sg)
+            # select color channel if applicable
+            if len(im.shape) != 2:
+                im = sitk.GetImageFromArray(transformed['image'][:,:,0])
+            else:
+                im = sitk.GetImageFromArray(transformed['image'])
+            if len(sg.shape) != 2:
+                sg = sitk.GetImageFromArray(transformed['mask'][:,:,0])
+            else:
+                sg = sitk.GetImageFromArray(transformed['mask'])
+
         return self.extractor.execute(im, seg_path, label=label)
     
     def parallell_extraction(self, list_of_dicts: list, n_processes = None):
