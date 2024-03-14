@@ -3,6 +3,7 @@ import typing
 import logging
 import argparse
 import pandas as pd
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -105,12 +106,73 @@ def pretty_dict_str(d, key_only=False):
 def oversample_data(data, key_to_use='dx'):
     k_values = [row[key_to_use] for row in data]
     k_counts = {k: k_values.count(k) for k in set(k_values)}
-    total_instances = len(data)
-    oversampling_ratio = {k: total_instances / count for k, count in k_counts.items()}
+
+    # total_instances = len(data)
+    instances_per_class = max(k_counts.values())
+    oversampling_ratio = {k: instances_per_class / count for k, count in k_counts.items()}
+
+    logger.info("Prior number of key matching rows:" +
+                pretty_dict_str(k_counts) +
+                f"\n" + "_"*20 +
+                f"\nTotal instances:{sum(k_counts.values())}")
 
     oversampled_data = []
     for row in data:
         k_value = row[key_to_use]
         oversampled_data.extend([row] * int(oversampling_ratio[k_value]))
+    
+    k_values = [row[key_to_use] for row in oversampled_data]
+    k_counts = {k: k_values.count(k) for k in set(k_values)}
+    logger.info("Number of rows after oversampling:\n" +
+                pretty_dict_str(k_counts) +
+                f"\n" + "_"*20 +
+                f"\nTotal instances:{sum(k_counts.values())}")
 
     return oversampled_data
+
+def undersample_data(data, key_to_use='dx', seed=42, multiplier=1.0):
+    """
+    Undersamples the given data based on a specified key.
+
+    Args:
+        data (list): The input data to be undersampled.
+        key_to_use (str, optional): The key to use for undersampling. Defaults to 'dx'.
+        seed (int, optional): The seed value for randomization. Defaults to 42.
+        multiplier (float, optional): The multiplier [0. ... 1.] to determine the minimum count for undersampling. Defaults to 1.0.
+
+    Returns:
+        list: The undersampled data.
+
+    Raises:
+        AssertionError: If min_count is not greater than 0 or if min_count is greater than the smallest class count.
+
+    """
+    random.seed(seed)
+
+    k_values = [row[key_to_use] for row in data]
+    k_counts = {k: k_values.count(k) for k in set(k_values)}
+    logger.info("Prior number of key matching rows:" +
+                pretty_dict_str(k_counts) +
+                f"\n" + "_"*20 +
+                f"\nTotal instances:{sum(k_counts.values())}")
+    
+    min_count = int(min(k_counts.values()) * multiplier)
+    
+    assert min_count > 0, "min_count must be greater than 0"
+    assert min_count <= min(k_counts.values()), "min_count must be less than or equal to the smallest class count"
+
+    undersampled_data = []
+    for k_value in k_counts:
+        # Select random subset of rows for undersampling
+        subset = [row for row in data if row[key_to_use] == k_value]
+        random.shuffle(subset)
+        subset = subset[:min_count]
+        undersampled_data.extend(subset)
+    k_values = [row[key_to_use] for row in undersampled_data]
+    k_counts = {k: k_values.count(k) for k in set(k_values)}
+    logger.info("Number of rows after undersampling:\n" +
+                pretty_dict_str(k_counts) +
+                f"\n" + "_"*20 +
+                f"\nTotal instances:{sum(k_counts.values())}")
+
+    return undersampled_data
