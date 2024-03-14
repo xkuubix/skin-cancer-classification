@@ -64,8 +64,18 @@ def insert_paths_df(df: pd.DataFrame,
 def random_split_df(df: pd.DataFrame,
                     train_rest_frac, val_test_frac,
                     seed) -> tuple:
+    """
+    Randomly splits a DataFrame into train, validation, and test sets.
 
-    # print('\n seed = ', seed)
+    Parameters:
+    df (pd.DataFrame): The DataFrame to be split.
+    train_rest_frac (float): The fraction of data to be used for training.
+    val_test_frac (float): The fraction of remaining data to be used for validation and testing.
+    seed (int): The random seed for reproducibility.
+
+    Returns:
+    tuple: A tuple containing the train, validation, and test sets.
+    """
     train = df.sample(frac=train_rest_frac, random_state=seed)
     x = df.drop(train.index)
     val = x.sample(frac=val_test_frac, random_state=seed)
@@ -104,6 +114,17 @@ def pretty_dict_str(d, key_only=False):
     return pretty_dict
  
 def oversample_data(data, key_to_use='dx'):
+    """
+    Oversamples the data based on the specified key.
+
+    Args:
+        data (list of dicts): The input data to be oversampled.
+        key_to_use (str, optional): The key to use for oversampling. Defaults to 'dx'.
+
+    Returns:
+        list of dicts: The oversampled data.
+
+    """
     k_values = [row[key_to_use] for row in data]
     k_counts = {k: k_values.count(k) for k in set(k_values)}
 
