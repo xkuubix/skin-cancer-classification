@@ -7,7 +7,7 @@ import pandas as pd
 from PIL import Image
 from collections import Counter
 from torch.utils.data import Dataset
-from utils import pretty_print_dict
+from utils import pretty_dict_str
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class HAM10000(Dataset):
         self._transform = transform
         self.mapping_handler = MappingHandler()
         msg = 'Finished initialising - class distribution:'
-        msg += pretty_print_dict(Counter(self._df['dx']))
+        msg += pretty_dict_str(Counter(self._df['dx']))
 
         logger.info(msg)
 
