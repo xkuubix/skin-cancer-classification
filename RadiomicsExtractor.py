@@ -6,17 +6,31 @@ from multiprocessing import Pool
 import logging
 logger = logging.getLogger(__name__)
 from tqdm import tqdm, trange
-from utils import pretty_print_dict
+from utils import pretty_dict_str
 
 class RadiomicsExtractor():
+    """
+    A class for extracting radiomics features from medical images.
+
+    Args:
+        param_file (str): The path to the parameter file used by the RadiomicsFeatureExtractor.
+
+    Attributes:
+        extractor (RadiomicsFeatureExtractor): The RadiomicsFeatureExtractor object used for feature extraction.
+
+    Methods:
+        extract_radiomics: Extracts radiomics features from an image and its corresponding segmentation.
+        parallell_extraction: Performs parallel extraction of radiomics features from a list of images.
+        serial_extraction: Performs serial extraction of radiomics features from a list of images.
+    """
+
     def  __init__(self, param_file: str):
         self.extractor = featureextractor.RadiomicsFeatureExtractor(param_file)
         msg = "\n\nEnabled Image Types:"
-        msg += pretty_print_dict(self.extractor.enabledImagetypes, key_only=True)
+        msg += pretty_dict_str(self.extractor.enabledImagetypes, key_only=True)
         msg += "\n\nEnabled Features:"
-        msg += pretty_print_dict(self.extractor.enabledFeatures, key_only=True)
+        msg += pretty_dict_str(self.extractor.enabledFeatures, key_only=True)
         logger.info(msg)
-
     
     def extract_radiomics(self, d:dict, label=255, color_channel=0):
         img_path = d['img_path']
