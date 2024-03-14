@@ -84,7 +84,7 @@ def get_args_parser(path: typing.Union[str, bytes, os.PathLike]):
     return parser
 
    
-def pretty_print_dict(d, key_only=False):
+def pretty_dict_str(d, key_only=False):
     #take empty string
     sorted_list = sorted(d.items())
     sorted_dict = {}
@@ -102,3 +102,15 @@ def pretty_print_dict(d, key_only=False):
         #return result
     return pretty_dict
  
+def oversample_data(data, key_to_use='dx'):
+    k_values = [row[key_to_use] for row in data]
+    k_counts = {k: k_values.count(k) for k in set(k_values)}
+    total_instances = len(data)
+    oversampling_ratio = {k: total_instances / count for k, count in k_counts.items()}
+
+    oversampled_data = []
+    for row in data:
+        k_value = row[key_to_use]
+        oversampled_data.extend([row] * int(oversampling_ratio[k_value]))
+
+    return oversampled_data
