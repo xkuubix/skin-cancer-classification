@@ -13,7 +13,7 @@ import datetime
 import albumentations as A
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 
 logger_radiomics = logging.getLogger("radiomics")
 logger_radiomics.setLevel(logging.ERROR)
@@ -38,29 +38,27 @@ train_df, val_df, test_df = utils.random_split_df(df,
                                                   config['dataset']['split_fraction_train_rest'],
                                                   config['dataset']['split_fraction_val_test'],
                                                   seed=seed)
+# %%
 train_df = utils.ungroup_df(train_df)
 val_df = utils.ungroup_df(val_df)
 test_df = utils.ungroup_df(test_df)
-# %%
-transform = None
-train_ds = HAM10000(df=train_df, transform=transform)
-val_ds = HAM10000(df=val_df, transform=transform)
-test_ds = HAM10000(df=test_df, transform=transform)
 # %% RADIOMICS FEATURES EXTRACTION
-d = train_df.to_dict(orient='records')
+train_d = train_df.to_dict(orient='records')
+test_d = test_df.to_dict(orient='records')
+val_d = val_df.to_dict(orient='records')
+# %%
 
 if config['dataset']['train_sampling']['method'] == 'oversample':
-    d = utils.oversample_data(d)
+    train_d = utils.oversample_data(train_d)
 elif config['dataset']['train_sampling']['method'] == 'undersample':
-    d = utils.undersample_data(d, seed=seed, multiplier=config['dataset']['train_sampling']['multiplier'])
+    train_d = utils.undersample_data(train_d, seed=seed, multiplier=config['dataset']['train_sampling']['multiplier'])
 elif config['dataset']['train_sampling']['method'] == 'none':
     pass
 
 if config['radiomics']['extract']:
 
-
-    transforms = A.Compose([
-        A.ToGray(p=1),
+    transforms_train = A.Compose([
+        A.ToGray(p=1, always_apply=True),
         # A.RandomCrop(width=256, height=256),
         A.HorizontalFlip(p=0.5),
         A.VerticalFlip(p=0.5),
@@ -78,34 +76,60 @@ if config['radiomics']['extract']:
         ], p=0.25),
         A.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=0.1, val_shift_limit=0.1, p=0.5),
     ])
+    transforms_val_test = A.Compose([A.ToGray(p=1),])
+    transforms_train = A.Compose([A.ToGray(p=1, always_apply=True),])
 
-
-    extractor = RadiomicsExtractor(param_file='params.yml', transforms=transforms )
+    extractor_train = RadiomicsExtractor(param_file='params.yml', transforms=transforms_train)
+    extractor_val_test = RadiomicsExtractor(param_file='params.yml', transforms=transforms_val_test)
     if config['radiomics']['mode'] == 'parallel':
-        results = extractor.parallell_extraction(d)
+        results_train = extractor_train.parallell_extraction(train_d)
+        results_val = extractor_val_test.parallell_extraction(val_d)
+        results_test = extractor_val_test.parallell_extraction(test_d)
     elif config['radiomics']['mode'] == 'serial':
-        results = extractor.serial_extraction(d)
-    d = pd.DataFrame(d)
-    d = pd.concat([d, pd.DataFrame(results)], axis=1)
+        results_train = extractor_train.serial_extraction(train_d)
+        results_val = extractor_val_test.serial_extraction(val_d)
+        results_test = extractor_val_test.serial_extraction(test_d)
+    
+    train_df = pd.DataFrame(train_d)
+    train_df = pd.concat([train_df, pd.DataFrame(results_train)], axis=1)
+    val_df = pd.DataFrame(val_d)
+    val_df = pd.concat([val_df, pd.DataFrame(results_val)], axis=1)
+    test_df = pd.DataFrame(test_d)
+    test_df = pd.concat([test_df, pd.DataFrame(results_test)], axis=1)
+    
     if config['radiomics']['save_or_load'] == 'save':
-        with open(config['dir']['pkl'], 'wb') as handle:
-            pickle.dump(d, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            logger.info(f"Saved radiomics features in {config['dir']['pkl']}")
-            logger.info(f"Saved extraction details in {config['dir']['inf']}")
-            image_types = extractor.get_enabled_image_types()
-            feature_types = extractor.get_enabled_features()
-            with open(config['dir']['inf'], 'w') as file:
-                current_datetime = datetime.datetime.now()
-                file.write(f"Modified: {current_datetime}\n")
-                file.write(yaml.dump(config))
-                file.write('\n\nEnabled Image Types:\n')
-                file.write('\n'.join(image_types))
-                file.write('\n\nEnabled Features:\n')
-                file.write('\n'.join(feature_types))
-                file.write('\n\nTransforms' + str(transforms))
+        with open(config['dir']['pkl_train'], 'wb') as handle:
+            pickle.dump(train_df, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open(config['dir']['pkl_val'], 'wb') as handle:
+            pickle.dump(val_df, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open(config['dir']['pkl_test'], 'wb') as handle:
+            pickle.dump(test_df, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        logger.info(f"Saved radiomics features in {config['dir']['pkl_train']}")
+        logger.info(f"Saved radiomics features in {config['dir']['pkl_val']}")
+        logger.info(f"Saved radiomics features in {config['dir']['pkl_test']}")
+        image_types = extractor_train.get_enabled_image_types()
+        feature_types = extractor_train.get_enabled_features()
+        with open(config['dir']['inf'], 'w') as file:
+            current_datetime = datetime.datetime.now()
+            file.write(f"Modified: {current_datetime}\n")
+            file.write(yaml.dump(config))
+            file.write('\n\nEnabled Image Types:\n')
+            file.write('\n'.join(image_types))
+            file.write('\n\nEnabled Features:\n')
+            file.write('\n'.join(feature_types))
+            file.write('\n\nTransforms:\n' + str(transforms_train))
+        logger.info(f"Saved extraction details in {config['dir']['inf']}")
 elif config['radiomics']['save_or_load'] == 'load':
-    assert os.path.exists(config['dir']['pkl'])
-    with open(config['dir']['pkl'], 'rb') as handle:
-        results = pickle.load(handle)
+    with open(config['dir']['pkl_train'], 'rb') as handle:
+        train_df = pickle.load(handle)
+    with open(config['dir']['pkl_val'], 'rb') as handle:
+        val_df = pickle.load(handle)
+    with open(config['dir']['pkl_test'], 'rb') as handle:
+        test_df = pickle.load(handle)
         logger.info(f"Loaded radiomics features from {config['dir']['pkl']}")
+# %%
+train_ds = HAM10000(df=train_df, mode='radiomics')
+val_ds = HAM10000(df=val_df, mode='radiomics')
+test_ds = HAM10000(df=test_df, mode='radiomics')
+
 # %%
