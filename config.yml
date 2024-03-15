@@ -1,13 +1,13 @@
 seed: 42
 
 dir:
-  seg:   '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_segmentations/'
-  img:   '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_images/'
-  csv:   '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_metadata'
+  seg:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_segmentations/'
+  img:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_images/'
+  csv:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_metadata'
   pkl_train:   '/media/dysk_a/jr_buler/HAM10000/my_pickle/train_radiomic_features.pkl'
-  pkl_val:   '/media/dysk_a/jr_buler/HAM10000/my_pickle/val_radiomic_features.pkl'
-  pkl_test:   '/media/dysk_a/jr_buler/HAM10000/my_pickle/test_radiomic_features.pkl'
-  inf:   '/media/dysk_a/jr_buler/HAM10000/my_pickle/info.txt'
+  pkl_val:     '/media/dysk_a/jr_buler/HAM10000/my_pickle/val_radiomic_features.pkl'
+  pkl_test:    '/media/dysk_a/jr_buler/HAM10000/my_pickle/test_radiomic_features.pkl'
+  inf:         '/media/dysk_a/jr_buler/HAM10000/my_pickle/info.txt'
 
 dataset:
   split_fraction_train_rest: 0.6
