@@ -30,11 +30,10 @@ class HAM10000(Dataset):
             ValueError: If an invalid mode is provided.
 
         """
-        logger.info('Initialising ...')
         self._df = df
         self._transform = transform
         self.mapping_handler = MappingHandler()
-        msg = 'Finished initialising - class distribution:'
+        msg = 'Initialized - class distribution:'
         msg += pretty_dict_str(Counter(self._df['dx']))
         logger.info(msg)
         self.mode = mode
