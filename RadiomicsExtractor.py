@@ -10,13 +10,16 @@ from utils import pretty_dict_str
 
 class RadiomicsExtractor():
     """
-    A class for extracting radiomics features from medical images.
+    A class for extracting radiomics features from medical (gray scale) images.
+    Only 2D images are supported. Only single label segmentations are supported.
 
     Args:
         param_file (str): The path to the parameter file used by the RadiomicsFeatureExtractor.
+        transforms (optional): A transformation function or pipeline to apply to the images and segmentations before feature extraction.
 
     Attributes:
         extractor (RadiomicsFeatureExtractor): The RadiomicsFeatureExtractor object used for feature extraction.
+        transforms (optional): The transformation function or pipeline applied to the images and segmentations.
 
     Methods:
         extract_radiomics: Extracts radiomics features from an image and its corresponding segmentation.
@@ -39,7 +42,7 @@ class RadiomicsExtractor():
     def get_enabled_features(self):
         return list(self.extractor.enabledFeatures.keys())
 
-    def extract_radiomics(self, d:dict, label=255, color_channel=0):
+    def extract_radiomics(self, d:dict):
         img_path = d['img_path']
         seg_path = d['seg_path']
         # tutaj augmentacje
@@ -58,7 +61,7 @@ class RadiomicsExtractor():
                 sg = sitk.GetImageFromArray(transformed['mask'][:,:,0])
             else:
                 sg = sitk.GetImageFromArray(transformed['mask'])
-
+        label = self.extractor.settings.get('label', None)
         return self.extractor.execute(im, seg_path, label=label)
     
     def parallell_extraction(self, list_of_dicts: list, n_processes = None):
