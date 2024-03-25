@@ -53,6 +53,7 @@ class RadiomicsExtractor():
             sg = sitk.GetArrayFromImage(sg)
             transformed = self.transforms(image=im, mask=sg)
             # select color channel if applicable
+            # (somehow sitk reads single channel mask in 3 (duplicates) channels)
             if len(im.shape) != 2:
                 im = sitk.GetImageFromArray(transformed['image'][:,:,0])
             else:
