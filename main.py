@@ -1,22 +1,14 @@
 # %% IMPORTS AND SETTINGS
 import yaml
 import pickle
-import os
 import torch
 import numpy as np
-import pandas as pd
 import utils
 import logging
-from RadiomicsExtractor import RadiomicsExtractor
 from Dataset import HAM10000
-import datetime
-import albumentations as A
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.ERROR)
-
-logger_radiomics = logging.getLogger("radiomics")
-logger_radiomics.setLevel(logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 
 # MAKE PARSER AND LOAD PARAMS FROM CONFIG FILE--------------------------------
 parser = utils.get_args_parser('config.yml')
@@ -29,107 +21,151 @@ seed = config['seed']
 np.random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
-# %% DATA LOADING - 3-SET-SPLIT
-df = pd.read_csv(config['dir']['csv'])
-df = utils.insert_paths_df(df, config['dir']['img'], config['dir']['seg'])
-df = utils.group_df(df)
-
-train_df, val_df, test_df = utils.random_split_df(df,
-                                                  config['dataset']['split_fraction_train_rest'],
-                                                  config['dataset']['split_fraction_val_test'],
-                                                  seed=seed)
-# %%
-train_df = utils.ungroup_df(train_df)
-val_df = utils.ungroup_df(val_df)
-test_df = utils.ungroup_df(test_df)
-# %% RADIOMICS FEATURES EXTRACTION
-train_d = train_df.to_dict(orient='records')
-test_d = test_df.to_dict(orient='records')
-val_d = val_df.to_dict(orient='records')
-# %%
-
-if config['dataset']['train_sampling']['method'] == 'oversample':
-    train_d = utils.oversample_data(train_d)
-elif config['dataset']['train_sampling']['method'] == 'undersample':
-    train_d = utils.undersample_data(train_d, seed=seed, multiplier=config['dataset']['train_sampling']['multiplier'])
-elif config['dataset']['train_sampling']['method'] == 'none':
-    pass
-
-if config['radiomics']['extract']:
-
-    transforms_train = A.Compose([
-        A.ToGray(p=1, always_apply=True),
-        # A.RandomCrop(width=256, height=256),
-        A.HorizontalFlip(p=0.5),
-        A.VerticalFlip(p=0.5),
-        A.Rotate(limit=90, p=0.5),
-        A.RandomBrightnessContrast(p=0.5),
-
-        A.OneOf([
-            A.MedianBlur(blur_limit=3, p=0.5),
-            A.Blur(blur_limit=3, p=0.5),
-        ], p=0.25),
-        A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.2, rotate_limit=45, p=0.5),
-        A.OneOf([
-            A.OpticalDistortion(p=0.5),
-            A.GridDistortion(p=0.5),
-        ], p=0.25),
-        A.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=0.1, val_shift_limit=0.1, p=0.5),
-    ])
-    transforms_val_test = A.Compose([A.ToGray(p=1),])
-    transforms_train = A.Compose([A.ToGray(p=1, always_apply=True),])
-
-    extractor_train = RadiomicsExtractor(param_file='params.yml', transforms=transforms_train)
-    extractor_val_test = RadiomicsExtractor(param_file='params.yml', transforms=transforms_val_test)
-    if config['radiomics']['mode'] == 'parallel':
-        results_train = extractor_train.parallell_extraction(train_d)
-        results_val = extractor_val_test.parallell_extraction(val_d)
-        results_test = extractor_val_test.parallell_extraction(test_d)
-    elif config['radiomics']['mode'] == 'serial':
-        results_train = extractor_train.serial_extraction(train_d)
-        results_val = extractor_val_test.serial_extraction(val_d)
-        results_test = extractor_val_test.serial_extraction(test_d)
-    
-    train_df = pd.DataFrame(train_d)
-    train_df = pd.concat([train_df, pd.DataFrame(results_train)], axis=1)
-    val_df = pd.DataFrame(val_d)
-    val_df = pd.concat([val_df, pd.DataFrame(results_val)], axis=1)
-    test_df = pd.DataFrame(test_d)
-    test_df = pd.concat([test_df, pd.DataFrame(results_test)], axis=1)
-    
-    if config['radiomics']['save_or_load'] == 'save':
-        with open(config['dir']['pkl_train'], 'wb') as handle:
-            pickle.dump(train_df, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open(config['dir']['pkl_val'], 'wb') as handle:
-            pickle.dump(val_df, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open(config['dir']['pkl_test'], 'wb') as handle:
-            pickle.dump(test_df, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        logger.info(f"Saved radiomics features in {config['dir']['pkl_train']}")
-        logger.info(f"Saved radiomics features in {config['dir']['pkl_val']}")
-        logger.info(f"Saved radiomics features in {config['dir']['pkl_test']}")
-        image_types = extractor_train.get_enabled_image_types()
-        feature_types = extractor_train.get_enabled_features()
-        with open(config['dir']['inf'], 'w') as file:
-            current_datetime = datetime.datetime.now()
-            file.write(f"Modified: {current_datetime}\n")
-            file.write(yaml.dump(config))
-            file.write('\n\nEnabled Image Types:\n')
-            file.write('\n'.join(image_types))
-            file.write('\n\nEnabled Features:\n')
-            file.write('\n'.join(feature_types))
-            file.write('\n\nTransforms:\n' + str(transforms_train))
-        logger.info(f"Saved extraction details in {config['dir']['inf']}")
-elif config['radiomics']['save_or_load'] == 'load':
-    with open(config['dir']['pkl_train'], 'rb') as handle:
-        train_df = pickle.load(handle)
-    with open(config['dir']['pkl_val'], 'rb') as handle:
-        val_df = pickle.load(handle)
-    with open(config['dir']['pkl_test'], 'rb') as handle:
-        test_df = pickle.load(handle)
-        logger.info(f"Loaded radiomics features from {config['dir']['pkl']}")
-# %%
+# %% Load radiomics features
+with open(config['dir']['pkl_train'], 'rb') as handle:
+    train_df = pickle.load(handle)
+    logger.info(f"Loaded radiomics features (train) from {config['dir']['pkl_train']}")
+with open(config['dir']['pkl_val'], 'rb') as handle:
+    val_df = pickle.load(handle)
+    logger.info(f"Loaded radiomics features (val) from {config['dir']['pkl_val']}")
+with open(config['dir']['pkl_test'], 'rb') as handle:
+    test_df = pickle.load(handle)
+    logger.info(f"Loaded radiomics features (test) from {config['dir']['pkl_test']}")
 train_ds = HAM10000(df=train_df, mode='radiomics')
 val_ds = HAM10000(df=val_df, mode='radiomics')
 test_ds = HAM10000(df=test_df, mode='radiomics')
-
 # %%
+def map_labels(label):
+    mapping = {
+        "mel": 0,
+        "nv": 1,
+        "bcc": 2,
+        "akiec": 3,
+        "bkl": 4,
+        "df": 5,
+        "vasc": 6
+    }
+    return mapping[label.lower()]
+
+cols_to_drop = ['lesion_id', 'image_id', 'img_path', 'seg_path', 'dx', 'dx_type', 'age', 'sex', 'localization', 'dataset']
+X_train = train_df.drop(columns=cols_to_drop)
+y_train = train_df['dx'].map(map_labels)
+X_val = val_df.drop(columns=cols_to_drop)
+y_val = val_df['dx'].map(map_labels)
+X_test = test_df.drop(columns=cols_to_drop)
+y_test = test_df['dx'].map(map_labels)
+
+X_train_v = np.vstack(X_train.values).astype(float)
+X_val_v = np.vstack(X_val.values).astype(float)
+X_test_v = np.vstack(X_test.values).astype(float)
+
+y_train_v = y_train.values.astype(int)
+y_val_v = y_val.values.astype(int)
+y_test_v = y_test.values.astype(int)
+
+if 'cuda' in config['device'] and torch.cuda.is_available():
+    device = torch.device(config['device'])
+else:
+    device = torch.device('cpu')
+# %%
+import optuna
+import torch
+from pytorch_tabnet.tab_model import TabNetClassifier
+# from pytorch_tabnet.pretraining import TabNetPretrainer
+
+# Define objective function for hyperparameter search
+def objective(trial):
+    # Define hyperparameters to search
+    n_d = trial.suggest_int('n_d', 8, 64)
+    n_a = trial.suggest_int('n_a', 8, 64)
+    n_steps = trial.suggest_int('n_steps', 3, 10)
+    n_independent = trial.suggest_int('n_independent', 1, 5)
+    n_shared = trial.suggest_int('n_shared', 1, 5)
+    gamma = trial.suggest_float('gamma', 1.0, 2.0)
+    lambda_sparse = trial.suggest_float('lambda_sparse', 0., 0.1)
+    
+    # Define optimizer parameters to search
+    optimizer_name = trial.suggest_categorical('optimizer_name', ['Adam', 'SGD'])
+    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
+    weight_decay = trial.suggest_float('weight_decay', 1e-6, 1e-3, log=True)
+    # Initialize optimizer based on the chosen name
+    if optimizer_name == 'Adam':
+        optimizer_fn = torch.optim.Adam
+    elif optimizer_name == 'SGD':
+        optimizer_fn = torch.optim.SGD
+    # Initialize optimizer parameters
+    optimizer_params = {
+        'lr': learning_rate,
+        'weight_decay': weight_decay
+    }
+
+    # Initialize TabNet model with hyperparameters
+    model = TabNetClassifier(n_d=n_d,
+                             n_a=n_a,
+                             n_steps=n_steps,
+                             n_independent=n_independent,
+                             n_shared=n_shared,
+                             gamma=gamma,
+                             lambda_sparse=lambda_sparse,
+                             verbose=0,
+                             optimizer_fn=optimizer_fn,
+                             optimizer_params=optimizer_params)
+    
+    # Train the model
+    model.fit(
+        X_train=X_train_v,
+        y_train=y_train_v,
+        eval_set=[(X_train_v, y_train_v), (X_val_v, y_val_v)],
+        eval_name=['train', 'valid'],
+        eval_metric=['accuracy'],
+        max_epochs=1000,
+        patience=100,
+        batch_size=1024)
+    
+    # Evaluate the model
+    accuracy = np.min(model.history['valid_accuracy'])
+    
+    return accuracy
+
+# Perform hyperparameter search
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=100)
+
+# Get best hyperparameters
+best_params = study.best_params
+print("Best Hyperparameters:", best_params)
+
+#%%
+# from matplotlib import pyplot as plt
+# from sklearn import metrics
+# predicted = classifier.predict_proba(X_test_v)
+# predicted_labels = predicted.argmax(axis=1)
+# confusion_matrix = metrics.confusion_matrix(y_test_v, predicted_labels)
+# cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix = confusion_matrix, display_labels = ['mel', 'nv', 'bcc', 'akiec', 'bkl', 'df', 'vasc'])
+# cm_display.plot()
+# plt.show()
+# %%
+from sklearn.linear_model import Lasso, ElasticNet
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline
+
+pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('model', Lasso())
+])
+param_grid = {
+    'model__alpha': np.arange(0.01, 100, 0.01),  # Range of alpha values to search
+    'model__l1_ratio': np.arange(0.1, 1.0, 0.1)  # Range of l1_ratio values to search
+}
+search = GridSearchCV(pipeline,
+                      param_grid,
+                      cv=5, 
+                      scoring="neg_mean_squared_error",
+                      verbose=3)
+
+search.fit(X, y)
+print("Best Parameters:", search.best_params_)
+print("Best Score:", search.best_score_)
+best_model = search.best_estimator_
+feature_importances = best_model.named_steps['model'].coef_
