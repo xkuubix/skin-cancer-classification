@@ -1,4 +1,5 @@
 seed: 42
+device: 'cuda:0'
 
 dir:
   seg:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_segmentations/'
@@ -10,13 +11,13 @@ dir:
   inf:         '/media/dysk_a/jr_buler/HAM10000/my_pickle/info.txt'
 
 dataset:
-  split_fraction_train_rest: 0.6
+  split_fraction_train_rest: 0.7
   split_fraction_val_test: 0.5
   train_sampling:
-    method: 'oversample' # oversample, undersample none
+    method: 'none' # oversample, undersample none
     multiplier: 1.0 # 0. to 1. value 1.0 means no change (applicable in undersampling scenario)
 
 radiomics:
-  extract: True
-  save_or_load: 'none' # save, load, none
+  extract: True # True, False, if False load from pkl
   mode: 'parallel' #serial, parallel
+  save: True # True, False
