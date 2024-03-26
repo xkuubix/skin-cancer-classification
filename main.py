@@ -6,6 +6,15 @@ import numpy as np
 import utils
 import logging
 from Dataset import HAM10000
+import optuna
+import torch
+from pytorch_tabnet.tab_model import TabNetClassifier
+# from pytorch_tabnet.pretraining import TabNetPretrainer
+from sklearn.linear_model import Lasso, ElasticNet
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +30,7 @@ seed = config['seed']
 np.random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
+
 # %% Load radiomics features
 with open(config['dir']['pkl_train'], 'rb') as handle:
     train_df = pickle.load(handle)
@@ -55,25 +65,82 @@ y_val = val_df['dx'].map(map_labels)
 X_test = test_df.drop(columns=cols_to_drop)
 y_test = test_df['dx'].map(map_labels)
 
-X_train_v = np.vstack(X_train.values).astype(float)
-X_val_v = np.vstack(X_val.values).astype(float)
-X_test_v = np.vstack(X_test.values).astype(float)
+if 'cuda' in config['device'] and torch.cuda.is_available():
+    device = torch.device(config['device'])
+else:
+    device = torch.device('cpu')
+
+# %% Feature selection
+# import numpy as np
+# import matplotlib.pyplot as plt
+
+# alphas = np.linspace(0.00001,1,1000)
+# lasso = Lasso(max_iter=10000)
+# coefs = []
+# scores = []
+# scaler = StandardScaler()
+# scaler.fit(X_train)
+# for a in alphas:
+#     lasso.set_params(alpha=a)
+#     lasso.fit(scaler.transform(X_train), y_train)
+#     # lasso.fit(X_train, y_train)
+#     coefs.append(lasso.coef_)
+#     scores.append(lasso.score(scaler.transform(X_train), y_train))
+# ax = plt.gca()
+
+# ax.plot(alphas, coefs)
+# ax.set_xscale('log')
+# plt.axis('tight')
+# plt.xlabel('alpha')
+# plt.ylabel('Standardized Coefficients')
+# plt.title('Lasso coefficients as a function of alpha');
+# %%
+scaler = StandardScaler()
+scaler.fit(X_train)
+
+pipeline = Pipeline([
+    # ('scaler', StandardScaler()),
+    ('model', Lasso(max_iter=10000))
+])
+param_grid = {
+    'model__alpha': np.arange(1e-2, 1e-0, 1e-3),  # Range of alpha values to search
+    # 'model__l1_ratio': np.arange(0.1, 1.0, 0.1)  # Range of l1_ratio values to search
+}
+search = GridSearchCV(pipeline,
+                      param_grid,
+                    #   n_jobs=-1,
+                      cv=5, 
+                      scoring="neg_mean_squared_error",
+                      verbose=0)
+
+search.fit(scaler.transform(X_train), y_train)
+print("Best Parameters:", search.best_params_)
+print("Best Score:", search.best_score_)
+best_model = search.best_estimator_
+feature_importances = best_model.named_steps['model'].coef_
+# %%
+print(f'Non-zero feature coefs: {np.count_nonzero(feature_importances)}')
+model = Lasso(alpha=search.best_params_['model__alpha'],
+              max_iter=10000)
+model.fit(scaler.transform(X_train), y_train)
+
+selected_features = X_train.columns[np.abs(feature_importances) > 0]
+X_train_selected = X_train[selected_features]
+X_val_selected = X_val[selected_features]
+X_test_selected = X_test[selected_features]
+
+
+
+X_train_selected = np.vstack(X_train_selected.values).astype(float)
+X_val_selected = np.vstack(X_val_selected.values).astype(float)
+X_test_selected = np.vstack(X_test_selected.values).astype(float)
 
 y_train_v = y_train.values.astype(int)
 y_val_v = y_val.values.astype(int)
 y_test_v = y_test.values.astype(int)
 
-if 'cuda' in config['device'] and torch.cuda.is_available():
-    device = torch.device(config['device'])
-else:
-    device = torch.device('cpu')
-# %%
-import optuna
-import torch
-from pytorch_tabnet.tab_model import TabNetClassifier
-# from pytorch_tabnet.pretraining import TabNetPretrainer
 
-# Define objective function for hyperparameter search
+# %% Define objective function for hyperparameter search
 def objective(trial):
     # Define hyperparameters to search
     n_d = trial.suggest_int('n_d', 8, 64)
@@ -113,23 +180,27 @@ def objective(trial):
     
     # Train the model
     model.fit(
-        X_train=X_train_v,
+        X_train=X_train_selected,
         y_train=y_train_v,
-        eval_set=[(X_train_v, y_train_v), (X_val_v, y_val_v)],
+        eval_set=[(X_train_selected, y_train_v),
+                   (X_val_selected, y_val_v)],
         eval_name=['train', 'valid'],
-        eval_metric=['accuracy'],
+        eval_metric=['accuracy', 'logloss'],
         max_epochs=1000,
-        patience=100,
-        batch_size=1024)
+        patience=100)
     
     # Evaluate the model
-    accuracy = np.min(model.history['valid_accuracy'])
+    loss = np.min(model.history['valid_logloss'])
     
-    return accuracy
+    return loss
+
+
+import warnings
+warnings.filterwarnings('ignore')
 
 # Perform hyperparameter search
-study = optuna.create_study(direction='maximize')
-study.optimize(objective, n_trials=100)
+study = optuna.create_study(direction='minimize')
+study.optimize(objective, n_trials=1000)
 
 # Get best hyperparameters
 best_params = study.best_params
@@ -144,28 +215,3 @@ print("Best Hyperparameters:", best_params)
 # cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix = confusion_matrix, display_labels = ['mel', 'nv', 'bcc', 'akiec', 'bkl', 'df', 'vasc'])
 # cm_display.plot()
 # plt.show()
-# %%
-from sklearn.linear_model import Lasso, ElasticNet
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import GridSearchCV
-from sklearn.pipeline import Pipeline
-
-pipeline = Pipeline([
-    ('scaler', StandardScaler()),
-    ('model', Lasso())
-])
-param_grid = {
-    'model__alpha': np.arange(0.01, 100, 0.01),  # Range of alpha values to search
-    'model__l1_ratio': np.arange(0.1, 1.0, 0.1)  # Range of l1_ratio values to search
-}
-search = GridSearchCV(pipeline,
-                      param_grid,
-                      cv=5, 
-                      scoring="neg_mean_squared_error",
-                      verbose=3)
-
-search.fit(X, y)
-print("Best Parameters:", search.best_params_)
-print("Best Score:", search.best_score_)
-best_model = search.best_estimator_
-feature_importances = best_model.named_steps['model'].coef_
