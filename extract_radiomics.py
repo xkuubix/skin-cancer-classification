@@ -77,10 +77,14 @@ if config['radiomics']['extract']:
         A.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=0.1, val_shift_limit=0.1, p=0.5),
     ])
     transforms_val_test = A.Compose([A.ToGray(p=1),])
-    transforms_train = A.Compose([A.ToGray(p=1, always_apply=True),])
+    # transforms_train = A.Compose([A.ToGray(p=1, always_apply=True),])
 
-    extractor_train = RadiomicsExtractor(param_file='params.yml', transforms=transforms_train)
-    extractor_val_test = RadiomicsExtractor(param_file='params.yml', transforms=transforms_val_test)
+    extractor_train = RadiomicsExtractor(param_file='params.yml',
+                                         transforms=transforms_train,
+                                         remove_hair=True)
+    extractor_val_test = RadiomicsExtractor(param_file='params.yml',
+                                            transforms=transforms_val_test,
+                                            remove_hair=True)
     if config['radiomics']['mode'] == 'parallel':
         results_train = extractor_train.parallell_extraction(train_d)
         results_val = extractor_val_test.parallell_extraction(val_d)

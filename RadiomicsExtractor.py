@@ -7,6 +7,8 @@ import logging
 logger = logging.getLogger(__name__)
 from tqdm import tqdm, trange
 from utils import pretty_dict_str
+import cv2
+
 
 class RadiomicsExtractor():
     """
@@ -27,7 +29,7 @@ class RadiomicsExtractor():
         serial_extraction: Performs serial extraction of radiomics features from a list of images.
     """
 
-    def  __init__(self, param_file: str, transforms=None):
+    def  __init__(self, param_file: str, transforms=None, remove_hair=True):
         self.extractor = featureextractor.RadiomicsFeatureExtractor(param_file)
         msg = "\n\nEnabled Image Types:"
         msg += pretty_dict_str(self.extractor.enabledImagetypes, key_only=True)
@@ -35,7 +37,11 @@ class RadiomicsExtractor():
         msg += pretty_dict_str(self.extractor.enabledFeatures, key_only=True)
         logger.info(msg)
         self.transforms = transforms
-    
+        self.remove_hair = remove_hair
+        if self.transforms:
+            logger.info(f"Transforms: {self.transforms}")
+        if self.remove_hair:
+            logger.info(f"Hair removal: {self.remove_hair}")    
     def get_enabled_image_types(self):
         return list(self.extractor.enabledImagetypes.keys())
     
@@ -46,11 +52,16 @@ class RadiomicsExtractor():
         img_path = d['img_path']
         seg_path = d['seg_path']
         # tutaj augmentacje
-        im = sitk.ReadImage(img_path)
-        sg = sitk.ReadImage(seg_path)
+        # im = sitk.ReadImage(img_path)
+        # sg = sitk.ReadImage(seg_path)
+        if self.remove_hair:
+            im = self._hair_removal(img_path)
+        else:
+            im = cv2.imread(img_path)
+        sg = cv2.imread(seg_path)
         if self.transforms:
-            im = sitk.GetArrayFromImage(im)
-            sg = sitk.GetArrayFromImage(sg)
+            # im = sitk.GetArrayFromImage(im)
+            # sg = sitk.GetArrayFromImage(sg)
             transformed = self.transforms(image=im, mask=sg)
             # select color channel if applicable
             # (somehow sitk reads single channel mask in 3 (duplicates) channels)
@@ -97,3 +108,14 @@ class RadiomicsExtractor():
         dt = end_time - start_time
         h, m, s = int(dt // 3600), int((dt % 3600 ) // 60), int(dt % 60)
         return h, m, s
+    
+    def _hair_removal(self, im_path, to_gray=False):
+        kernel = cv2.getStructuringElement(1, (17, 17)) # Kernel for the morphological filtering
+        src = cv2.imread(im_path)
+        grayScale = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY) #1 Convert the original image to grayscale
+        blackhat = cv2.morphologyEx(grayScale, cv2.MORPH_BLACKHAT, kernel) #2 Perform the blackHat filtering on the grayscale image to find the hair countours
+        ret,thresh2 = cv2.threshold(blackhat, 10, 255, cv2.THRESH_BINARY) # intensify the hair countours in preparation for the inpainting algorithm
+        dst = cv2.inpaint(src, thresh2, 1, cv2.INPAINT_TELEA) # inpaint on the original image
+        if to_gray:
+            dst = cv2.cvtColor(dst, cv2.COLOR_BGR2GRAY)
+        return dst
