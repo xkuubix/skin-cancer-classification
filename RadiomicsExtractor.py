@@ -77,7 +77,7 @@ class RadiomicsExtractor():
         return self.extractor.execute(im, seg_path, label=label)
     
     def parallell_extraction(self, list_of_dicts: list, n_processes = None):
-        logger.info(f"Extracting radiomics features: mode-parallel")
+        logger.info(f"Extraction mode: parallel")
         if n_processes is None:
             n_processes = multiprocessing.cpu_count() - 1
         start_time = time.time()
@@ -92,7 +92,7 @@ class RadiomicsExtractor():
         return results
     
     def serial_extraction(self, list_of_dicts: list):
-        logger.info(f"Extracting radiomics features: mode-serial")
+        logger.info(f"Extraction mode: serial")
         all_results = []
             # for item in trange(len(train_df)):
         start_time = time.time()
@@ -105,11 +105,17 @@ class RadiomicsExtractor():
         return all_results
 
     def _convert_time(self, start_time, end_time):
+        '''
+        Converts time in seconds to hours, minutes and seconds.
+        '''
         dt = end_time - start_time
         h, m, s = int(dt // 3600), int((dt % 3600 ) // 60), int(dt % 60)
         return h, m, s
     
     def _hair_removal(self, im_path, to_gray=False):
+        '''
+        Remove hair (and similar objects like ruler marks) from the image using inpainting algorithm.
+        '''
         kernel = cv2.getStructuringElement(1, (17, 17)) # Kernel for the morphological filtering
         src = cv2.imread(im_path)
         grayScale = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY) #1 Convert the original image to grayscale
