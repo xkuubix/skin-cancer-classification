@@ -77,7 +77,7 @@ if config['radiomics']['extract']:
         A.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=0.1, val_shift_limit=0.1, p=0.5),
     ])
     transforms_val_test = A.Compose([A.ToGray(p=1),])
-    # transforms_train = A.Compose([A.ToGray(p=1, always_apply=True),])
+    transforms_train = A.Compose([A.ToGray(p=1, always_apply=True),])
 
     extractor_train = RadiomicsExtractor(param_file='params.yml',
                                          transforms=transforms_train,
@@ -122,8 +122,9 @@ if config['radiomics']['extract']:
             file.write('\n\nEnabled Features:\n')
             file.write('\n'.join(feature_types))
             file.write('\n\nTransforms:\n' + str(transforms_train))
+            file.write('\n\nHair removal: ' + str(extractor_train.remove_hair))
         logger.info(f"Saved extraction details in {config['dir']['inf']}")
-# %%
+# %% Logging in constructor
 train_ds = HAM10000(df=train_df, mode='radiomics')
 val_ds = HAM10000(df=val_df, mode='radiomics')
 test_ds = HAM10000(df=test_df, mode='radiomics')
