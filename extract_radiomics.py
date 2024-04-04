@@ -50,20 +50,13 @@ val_d = val_df.to_dict(orient='records')
 
 if config['dataset']['train_sampling']['method'] == 'oversample':
     train_d = utils.oversample_data(train_d)
-elif config['dataset']['train_sampling']['method'] == 'undersample':
-    train_d = utils.undersample_data(train_d, seed=seed, multiplier=config['dataset']['train_sampling']['multiplier'])
-elif config['dataset']['train_sampling']['method'] == 'none':
-    pass
-# %%
-if config['radiomics']['extract']:
-
     transforms_train = A.Compose([
         A.ToGray(p=1),
         # A.RandomCrop(width=256, height=256),
         A.HorizontalFlip(p=0.5),
         A.VerticalFlip(p=0.5),
         A.Rotate(limit=90, p=0.5),
-        A.RandomBrightnessContrast(p=0.5),
+        A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
 
         A.OneOf([
             A.MedianBlur(blur_limit=3, p=0.5),
@@ -75,10 +68,15 @@ if config['radiomics']['extract']:
             A.GridDistortion(p=0.5),
         ], p=0.25),
         A.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=0.1, val_shift_limit=0.1, p=0.5),
+        A.RandomGamma(gamma_limit=(90, 110), p=0.5),
     ])
-    transforms_val_test = A.Compose([A.ToGray(p=1),])
+elif config['dataset']['train_sampling']['method'] == 'undersample':
+    train_d = utils.undersample_data(train_d, seed=seed, multiplier=config['dataset']['train_sampling']['multiplier'])
+elif config['dataset']['train_sampling']['method'] == 'none':
     transforms_train = A.Compose([A.ToGray(p=1, always_apply=True),])
-
+transforms_val_test = A.Compose([A.ToGray(p=1),])
+# %%
+if config['radiomics']['extract']:
     extractor_train = RadiomicsExtractor(param_file='params.yml',
                                          transforms=transforms_train,
                                          remove_hair=True)
