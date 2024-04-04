@@ -88,12 +88,12 @@ class HAM10000(Dataset):
 class MappingHandler:
     def __init__(self):
         self.mapping = {
-            "MEL": 0,
-            "NV": 1,
-            "BCC": 2,
-            "AKIEC": 3,
-            "BKL": 4,
-            "DF": 5,
+            "AKIEC": 0,
+            "BCC": 1,
+            "BKL": 2,
+            "DF": 3,
+            "MEL": 4,
+            "NV": 5,
             "VASC": 6
             }
 
