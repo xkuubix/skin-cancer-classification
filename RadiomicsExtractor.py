@@ -51,29 +51,28 @@ class RadiomicsExtractor():
     def extract_radiomics(self, d:dict):
         img_path = d['img_path']
         seg_path = d['seg_path']
-        # tutaj augmentacje
-        # im = sitk.ReadImage(img_path)
-        # sg = sitk.ReadImage(seg_path)
+        
         if self.remove_hair:
             im = self._hair_removal(img_path)
         else:
             im = cv2.imread(img_path)
         sg = cv2.imread(seg_path)
+
         if self.transforms:
-            # im = sitk.GetArrayFromImage(im)
-            # sg = sitk.GetArrayFromImage(sg)
             transformed = self.transforms(image=im, mask=sg)
-            # select color channel if applicable
-            # (somehow sitk reads single channel mask in 3 (duplicates) channels)
-            if len(im.shape) != 2:
-                im = sitk.GetImageFromArray(transformed['image'][:,:,0])
-            else:
-                im = sitk.GetImageFromArray(transformed['image'])
+            transformed['image'] = cv2.cvtColor(transformed['image'],
+                                                cv2.COLOR_BGR2GRAY)
+            im = sitk.GetImageFromArray(transformed['image'])
             if len(sg.shape) != 2:
                 sg = sitk.GetImageFromArray(transformed['mask'][:,:,0])
             else:
                 sg = sitk.GetImageFromArray(transformed['mask'])
+        else:
+            im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+            im = sitk.GetImageFromArray(im)
+            sg = sitk.GetImageFromArray(sg)
         label = self.extractor.settings.get('label', None)
+        
         return self.extractor.execute(im, seg_path, label=label)
     
     def parallell_extraction(self, list_of_dicts: list, n_processes = None):
