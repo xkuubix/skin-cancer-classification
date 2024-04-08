@@ -118,7 +118,7 @@ class RadiomicsExtractor():
         '''
         kernel = cv2.getStructuringElement(1, (17, 17)) # Kernel for the morphological filtering
         src = cv2.imread(im_path)
-        grayScale = cv2.cvtColor(src, cv2.COLOR_RGB2GRAY) #1 Convert the original image to grayscale
+        grayScale = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY) #1 Convert the original image to grayscale
         blackhat = cv2.morphologyEx(grayScale, cv2.MORPH_BLACKHAT, kernel) #2 Perform the blackHat filtering on the grayscale image to find the hair countours
         ret,thresh2 = cv2.threshold(blackhat, 10, 255, cv2.THRESH_BINARY) # intensify the hair countours in preparation for the inpainting algorithm
         dst = cv2.inpaint(src, thresh2, 1, cv2.INPAINT_TELEA) # inpaint on the original image
