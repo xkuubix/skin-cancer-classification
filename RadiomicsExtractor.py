@@ -59,6 +59,7 @@ class RadiomicsExtractor():
         sg = cv2.imread(seg_path)
 
         if self.transforms:
+            im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
             transformed = self.transforms(image=im, mask=sg)
             transformed['image'] = cv2.cvtColor(transformed['image'],
                                                 cv2.COLOR_BGR2GRAY)
