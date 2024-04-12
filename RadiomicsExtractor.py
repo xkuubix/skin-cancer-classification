@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 from tqdm import tqdm, trange
 from utils import pretty_dict_str
 import cv2
-
+import numpy as np
 
 class RadiomicsExtractor():
     """
@@ -52,11 +52,19 @@ class RadiomicsExtractor():
         img_path = d['img_path']
         seg_path = d['seg_path']
         
-        if self.remove_hair:
-            im = self._hair_removal(img_path)
-        else:
-            im = cv2.imread(img_path)
+        im = cv2.imread(img_path)
         sg = cv2.imread(seg_path)
+
+        if self.remove_hair:
+            im = self._hair_removal(im)
+        else:
+            pass
+        
+        # b, g, r = cv2.split(im)
+        # B = self._img_svd(b)
+        # G = self._img_svd(g)
+        # R = self._img_svd(r)
+        # im = cv2.merge((B, G, R))
 
         if self.transforms:
             im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
@@ -74,8 +82,13 @@ class RadiomicsExtractor():
             sg = sitk.GetImageFromArray(sg)
         label = self.extractor.settings.get('label', None)
         
-        return self.extractor.execute(im, seg_path, label=label)
+        return self.extractor.execute(im, sg, label=label)
     
+    def _img_svd(self, img, k=90):
+        u, s, v = np.linalg.svd(img, full_matrices=False)
+        img = np.dot(u[:, :k] * s[:k], v[:k, :]).astype(np.uint8)
+        return img
+
     def parallell_extraction(self, list_of_dicts: list, n_processes = None):
         logger.info(f"Extraction mode: parallel")
         if n_processes is None:
@@ -112,12 +125,12 @@ class RadiomicsExtractor():
         h, m, s = int(dt // 3600), int((dt % 3600 ) // 60), int(dt % 60)
         return h, m, s
     
-    def _hair_removal(self, im_path, to_gray=False):
+    def _hair_removal(self, im, to_gray=False):
         '''
         Remove hair (and similar objects like ruler marks) from the image using inpainting algorithm.
         '''
         kernel = cv2.getStructuringElement(1, (17, 17)) # Kernel for the morphological filtering
-        src = cv2.imread(im_path)
+        src = im
         grayScale = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY) #1 Convert the original image to grayscale
         blackhat = cv2.morphologyEx(grayScale, cv2.MORPH_BLACKHAT, kernel) #2 Perform the blackHat filtering on the grayscale image to find the hair countours
         ret,thresh2 = cv2.threshold(blackhat, 10, 255, cv2.THRESH_BINARY) # intensify the hair countours in preparation for the inpainting algorithm
