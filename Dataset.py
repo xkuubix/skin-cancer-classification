@@ -1,10 +1,11 @@
 import os
 import typing
 import logging
-
+import cv2
 import torch
 import pandas as pd
 import numpy as np
+from numpy import asarray
 from PIL import Image
 from collections import Counter
 from torch.utils.data import Dataset
@@ -51,12 +52,28 @@ class HAM10000(Dataset):
         if self.mode == 'images':
             # Load images from paths, map label
 
-            image = Image.open(image_path)
-            mask = Image.open(segmentation_path)
+            # image = Image.open(image_path)
+            # mask = Image.open(segmentation_path)
+
+            image = cv2.imread(image_path)
+            mask = cv2.imread(segmentation_path)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = cv2.resize(image, (224, 224))
+            mask = cv2.resize(mask, (224, 224))
+            image = asarray(image)
+            mask = asarray(mask)
+
 
             if self._transform:
-                image = self._transform(image)
-                mask = self._transform(mask)
+                transformed = self._transform(image=image, mask=mask)
+                image = transformed['image']
+                mask = transformed['mask']
+
+            image = image.transpose(2, 0, 1)
+            mask = mask.transpose(2, 0, 1)
+            image = torch.tensor(image, dtype=torch.float32)
+            label = torch.tensor(label, dtype=torch.long)
+            image = image / 255.0
 
             data_dict = {
                 'image': image,
