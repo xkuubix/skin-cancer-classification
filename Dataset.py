@@ -1,7 +1,7 @@
 import os
 import typing
 import logging
-import cv2
+# import cv2
 import torch
 import pandas as pd
 import numpy as np
@@ -48,21 +48,25 @@ class HAM10000(Dataset):
         image_path = self._df.iloc[index]['img_path']
         segmentation_path = self._df.iloc[index]['seg_path']
         label_str = self._df.iloc[index]['dx']
-        label = torch.tensor(self.mapping_handler.convert(label_str))
+        label = self.mapping_handler.convert(label_str)
         if self.mode == 'images':
             # Load images from paths, map label
 
             # image = Image.open(image_path)
             # mask = Image.open(segmentation_path)
 
-            image = cv2.imread(image_path)
-            mask = cv2.imread(segmentation_path)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            image = cv2.resize(image, (224, 224))
-            mask = cv2.resize(mask, (224, 224))
+            # image = cv2.imread(image_path)
+            # mask = cv2.imread(segmentation_path)
+            # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # image = cv2.resize(image, (224, 224))
+            # mask = cv2.resize(mask, (224, 224))
+
+            image = Image.open(image_path)
+            mask = Image.open(segmentation_path)
+           
             image = asarray(image)
             mask = asarray(mask)
-
+            # print(image.shape, mask.shape)
 
             if self._transform:
                 transformed = self._transform(image=image, mask=mask)
@@ -70,10 +74,11 @@ class HAM10000(Dataset):
                 mask = transformed['mask']
 
             image = image.transpose(2, 0, 1)
-            mask = mask.transpose(2, 0, 1)
-            image = torch.tensor(image, dtype=torch.float32)
-            label = torch.tensor(label, dtype=torch.long)
+            # mask = mask.transpose(2, 0, 1)
+            image = torch.from_numpy(image).float()
+            label = torch.from_numpy(np.array(label)).long()
             image = image / 255.0
+            image = torch.zeros(3, 224, 224)
 
             data_dict = {
                 'image': image,
