@@ -48,7 +48,7 @@ class HAM10000(Dataset):
         image_path = self._df.iloc[index]['img_path']
         segmentation_path = self._df.iloc[index]['seg_path']
         label_str = self._df.iloc[index]['dx']
-        label = self.mapping_handler.convert(label_str)
+        label = self.mapping_handler._convert(label_str)
         if self.mode == 'images':
             # Load images from paths, map label
 
@@ -78,7 +78,6 @@ class HAM10000(Dataset):
             image = torch.from_numpy(image).float()
             label = torch.from_numpy(np.array(label)).long()
             image = image / 255.0
-            image = torch.zeros(3, 224, 224)
 
             data_dict = {
                 'image': image,
@@ -119,7 +118,7 @@ class MappingHandler:
             "VASC": 6
             }
 
-    def convert(self, arg):
+    def _convert(self, arg):
         if type(arg) == str:
             arg = arg.upper()
         if arg in self.mapping:
