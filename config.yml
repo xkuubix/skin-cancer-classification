@@ -21,3 +21,13 @@ radiomics:
   extract: True # True, False, if False load from pkl
   mode: 'parallel' #serial, parallel
   save: True # True, False
+
+net_train:
+  optimizer: 'adam' # adam, sgd
+  criterion: 'ce' # bce, ce
+  scheduler: 'linear' # linear, step, plateau
+  epochs: 1000
+  patience: 20
+  batch_size: 256
+  lr: 0.0001
+  wd: 0.1
