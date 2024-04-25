@@ -127,3 +127,8 @@ if config['radiomics']['extract']:
             file.write('\n\nTransforms:\n' + str(transforms_train))
             file.write('\n\nHair removal: ' + str(extractor_train.remove_hair))
         logger.info(f"Saved extraction details in {config['dir']['inf']}")
+# %% Logging in constructor
+train_ds = HAM10000(df=train_df, mode='radiomics')
+val_ds = HAM10000(df=val_df, mode='radiomics')
+test_ds = HAM10000(df=test_df, mode='radiomics')
+# %%
