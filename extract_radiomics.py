@@ -11,6 +11,7 @@ from RadiomicsExtractor import RadiomicsExtractor
 from Dataset import HAM10000
 import datetime
 import albumentations as A
+import pickle
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -49,32 +50,32 @@ val_d = val_df.to_dict(orient='records')
 # %%
 
 if config['dataset']['train_sampling']['method'] == 'oversample':
+    train_original = train_d
     train_d = utils.oversample_data(train_d)
     transforms_train = A.Compose([
-        A.ToGray(p=1),
-        # A.RandomCrop(width=256, height=256),
+        A.Affine(scale=(0.9, 1),
+                 shear=(-10, 10),
+                 rotate=(-45, 45),
+                 p=1.),
         A.HorizontalFlip(p=0.5),
         A.VerticalFlip(p=0.5),
-        A.Rotate(limit=90, p=0.5),
-        A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
-
+        # A.GaussNoise(p=0.5),
+        A.CLAHE(p=0.5),
+        # A.RandomBrightnessContrast(brightness_limit=0.1,
+        #                            contrast_limit=0.1,
+        #                            p=0.5),
         A.OneOf([
-            A.MedianBlur(blur_limit=3, p=0.5),
-            A.Blur(blur_limit=3, p=0.5),
-        ], p=0.25),
-        A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.2, rotate_limit=45, p=0.5),
-        A.OneOf([
-            A.OpticalDistortion(p=0.5),
-            A.GridDistortion(p=0.5),
-        ], p=0.25),
-        A.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=0.1, val_shift_limit=0.1, p=0.5),
-        A.RandomGamma(gamma_limit=(90, 110), p=0.5),
+            A.OpticalDistortion(p=0.3),
+            A.GridDistortion(distort_limit=0.1, p=0.7),
+        ], p=0.5),
+        A.Normalize(),
     ])
 elif config['dataset']['train_sampling']['method'] == 'undersample':
     train_d = utils.undersample_data(train_d, seed=seed, multiplier=config['dataset']['train_sampling']['multiplier'])
+    transforms_train = None
 elif config['dataset']['train_sampling']['method'] == 'none':
-    transforms_train = A.Compose([A.ToGray(p=1, always_apply=True),])
-transforms_val_test = A.Compose([A.ToGray(p=1),])
+    transforms_train = None
+transforms_val_test = None
 # %%
 if config['radiomics']['extract']:
     extractor_train = RadiomicsExtractor(param_file='params.yml',
@@ -100,8 +101,12 @@ if config['radiomics']['extract']:
     test_df = pd.concat([test_df, pd.DataFrame(results_test)], axis=1)
     
     if config['radiomics']['save']:
+        # if os.path.exists(config['dir']['pkl_train']):
+        #     os.remove(config['dir']['pkl_train'])
         with open(config['dir']['pkl_train'], 'wb') as handle:
             pickle.dump(train_df, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        #     for i in range(len(train_df)):
+        #         pickle.dump(train_df.iloc[i:i+1], handle, protocol=pickle.HIGHEST_PROTOCOL)
         with open(config['dir']['pkl_val'], 'wb') as handle:
             pickle.dump(val_df, handle, protocol=pickle.HIGHEST_PROTOCOL)
         with open(config['dir']['pkl_test'], 'wb') as handle:
@@ -122,7 +127,3 @@ if config['radiomics']['extract']:
             file.write('\n\nTransforms:\n' + str(transforms_train))
             file.write('\n\nHair removal: ' + str(extractor_train.remove_hair))
         logger.info(f"Saved extraction details in {config['dir']['inf']}")
-# %% Logging in constructor
-train_ds = HAM10000(df=train_df, mode='radiomics')
-val_ds = HAM10000(df=val_df, mode='radiomics')
-test_ds = HAM10000(df=test_df, mode='radiomics')
