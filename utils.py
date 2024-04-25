@@ -1,9 +1,14 @@
 import os
+import time
+import random
 import typing
 import logging
 import argparse
+import torch
 import pandas as pd
-import random
+from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
+
 
 logger = logging.getLogger(__name__)
 
@@ -197,3 +202,94 @@ def undersample_data(data, key_to_use='dx', seed=42, multiplier=1.0):
                 f"\nTotal instances:{sum(k_counts.values())}")
 
     return undersampled_data
+
+
+
+# DNN TRAINING PART --------------------------------
+
+def train_net(net, train_dl, val_dl, criterion, optimizer, config, device):
+    net.to(device)
+    best_val_loss = float('inf')
+    best_model = None
+    patience = config['net_train']['patience']
+    early_stop_counter = 0
+    start_time = time.time()
+    for epoch in range(config['net_train']['epochs']):
+        net.train()
+        running_loss = 0.0
+        correct = 0
+        total = 0
+        for i, data in enumerate(train_dl):
+            inputs, labels = data['image'].to(device), data['label'].to(device)
+            optimizer.zero_grad()
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            # print(f"Batch {i+1}/{len(train_dl)}, loss: {loss.item():.3f}")
+        # Validation
+        net.eval()
+        running_val_loss = 0.0
+        val_correct = 0
+        val_total = 0
+        with torch.no_grad():
+            for data in val_dl:
+                images, labels = data['image'].to(device), data['label'].to(device)
+                outputs = net(images)
+                val_loss = criterion(outputs, labels)
+                running_val_loss += val_loss.item()
+                _, predicted = torch.max(outputs.data, 1)
+                val_total += labels.size(0)
+                val_correct += (predicted == labels).sum().item()
+        
+        avg_train_loss = running_loss / len(train_dl)
+        avg_val_loss = running_val_loss / len(val_dl)
+        train_accuracy = correct / total
+        val_accuracy = val_correct / val_total
+
+        end_time = time.time()
+        total_time = end_time - start_time
+        print(f"Epoch {epoch+1}, train-loss: {avg_train_loss:.3f}, val-loss: {avg_val_loss:.3f}, train-accuracy: {train_accuracy:.3f}, val-accuracy: {val_accuracy:.3f}", end=' ')
+        print(f"Time taken: {total_time//60:4.0f}:{total_time%60:2.0f}")
+
+        # Early stopping
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            best_model = net.state_dict()
+            early_stop_counter = 0
+        else:
+            early_stop_counter += 1
+            if early_stop_counter >= patience:
+                print("Early stopping triggered!")
+                break
+    
+    print('Finished Training')
+    return best_model
+
+def test_net(net, test_dl, device):
+    net.eval()
+    correct = 0
+    total = 0
+    predicted_labels = []
+    true_labels = []
+    with torch.no_grad():
+        for data in test_dl:
+            images, labels = data['image'].to(device), data['label'].to(device)
+            outputs = net(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            predicted_labels.extend(predicted.tolist())
+            true_labels.extend(labels.tolist())
+    accuracy = correct / total
+    print(f"Accuracy: {accuracy}")
+    print('Classification Report:')
+    print(classification_report(true_labels, predicted_labels))
+    print('Confusion Matrix:')
+    print(confusion_matrix(true_labels, predicted_labels))
+    
+    print('Finished Testing')
