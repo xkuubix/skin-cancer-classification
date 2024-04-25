@@ -51,43 +51,69 @@ class RadiomicsExtractor():
     def extract_radiomics(self, d:dict):
         img_path = d['img_path']
         seg_path = d['seg_path']
+        gray_features = 1
+        rgb_features = 1
+        label = self.extractor.settings.get('label', None)
         
         im = cv2.imread(img_path)
         sg = cv2.imread(seg_path)
+        im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+
 
         if self.remove_hair:
             im = self._hair_removal(im)
         else:
             pass
         
-        # b, g, r = cv2.split(im)
-        # B = self._img_svd(b)
-        # G = self._img_svd(g)
-        # R = self._img_svd(r)
-        # im = cv2.merge((B, G, R))
 
         if self.transforms:
-            im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
             transformed = self.transforms(image=im, mask=sg)
-            transformed['image'] = cv2.cvtColor(transformed['image'],
-                                                cv2.COLOR_BGR2GRAY)
-            im = sitk.GetImageFromArray(transformed['image'])
+            im = transformed['image']
             if len(sg.shape) != 2:
                 sg = sitk.GetImageFromArray(transformed['mask'][:,:,0])
             else:
                 sg = sitk.GetImageFromArray(transformed['mask'])
         else:
-            im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-            im = sitk.GetImageFromArray(im)
-            sg = sitk.GetImageFromArray(sg)
-        label = self.extractor.settings.get('label', None)
+            if len(sg.shape) != 2:
+                sg = sitk.GetImageFromArray(sg[:,:,0])
+            else:
+                sg = sitk.GetImageFromArray(sg)
+
         
-        return self.extractor.execute(im, sg, label=label)
+        if gray_features:
+            im_gray = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
+            im_gray = sitk.GetImageFromArray(im_gray)
+            features = self.extractor.execute(im_gray, sg, label=label)
+            features_gray = features
+
+        if rgb_features:
+            r, g, b = cv2.split(im)
+            r = sitk.GetImageFromArray(r)
+            g = sitk.GetImageFromArray(g)
+            b = sitk.GetImageFromArray(b)
+
+            dicts = [self.extractor.execute(r, sg, label=label), self.extractor.execute(g, sg, label=label), self.extractor.execute(b, sg, label=label)]
+            big_dict = {}
+            for i, d in enumerate(dicts):
+                for k, v in d.items():
+                    new_key = f"{k}_r" if i == 0 else f"{k}_g" if i == 1 else f"{k}_b"
+                    if new_key in big_dict:
+                        big_dict[new_key].extend(v)
+                    else:
+                        big_dict[new_key] = v
+            features = big_dict
     
+            if gray_features:
+                features.update(features_gray)
+
+        return features
+    
+
     def _img_svd(self, img, k=90):
         u, s, v = np.linalg.svd(img, full_matrices=False)
         img = np.dot(u[:, :k] * s[:k], v[:k, :]).astype(np.uint8)
         return img
+
 
     def parallell_extraction(self, list_of_dicts: list, n_processes = None):
         logger.info(f"Extraction mode: parallel")
@@ -104,6 +130,7 @@ class RadiomicsExtractor():
 
         return results
     
+
     def serial_extraction(self, list_of_dicts: list):
         logger.info(f"Extraction mode: serial")
         all_results = []
@@ -117,6 +144,7 @@ class RadiomicsExtractor():
         logger.info(f" Time taken: {h}h:{m}m:{s}s")
         return all_results
 
+
     def _convert_time(self, start_time, end_time):
         '''
         Converts time in seconds to hours, minutes and seconds.
@@ -125,6 +153,7 @@ class RadiomicsExtractor():
         h, m, s = int(dt // 3600), int((dt % 3600 ) // 60), int(dt % 60)
         return h, m, s
     
+
     def _hair_removal(self, im, to_gray=False):
         '''
         Remove hair (and similar objects like ruler marks) from the image using inpainting algorithm.

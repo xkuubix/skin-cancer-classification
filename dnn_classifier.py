@@ -121,7 +121,7 @@ criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(),
                              lr=config['net_train']['lr'],
                              weight_decay=config['net_train']['wd'])
-# scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
 # %%
 print(f"Optimizer: {optimizer}")
