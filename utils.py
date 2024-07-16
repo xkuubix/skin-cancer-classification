@@ -206,8 +206,14 @@ def undersample_data(data, key_to_use='dx', seed=42, multiplier=1.0):
 
 
 # DNN TRAINING PART --------------------------------
+def one_hot(x, length):
+    batch_size = x.size(0)
+    x_one_hot = torch.zeros(batch_size, length, dtype=torch.float)
+    for i in range(batch_size):
+        x_one_hot[i, x[i]] = torch.tensor(1.0, dtype=torch.float)
+    return x_one_hot
 
-def train_net(net, train_dl, val_dl, criterion, optimizer, config, device):
+def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, device):
     net.to(device)
     best_val_loss = float('inf')
     best_model = None
@@ -220,31 +226,68 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, config, device):
         correct = 0
         total = 0
         for i, data in enumerate(train_dl):
-            inputs, labels = data['image'].to(device), data['label'].to(device)
+            image = data['image']
+            # print(torch.mean(image, dim=0), torch.std(image, dim=0))
+            image = image.to(device)
+            target_idx = data['label']
+            target_idx = target_idx.to(device)
+            target = one_hot(target_idx, n_classes).to(device)
             optimizer.zero_grad()
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
+            outputs = net(image)
+            loss = net.loss(outputs, target, size_average=True)
+            # -------------------
+            import torch.nn as nn
+            # loss_fn = nn.MultiMarginLoss(p=2, margin=0.9)
+            # print(f'{target_idx.shape=}')
+            # print(f'{outputs.shape=}')
+            # v_mag = torch.sqrt(torch.sum(outputs**2, dim=2, keepdim=True))
+            # print(f'{v_mag.shape=}')
+            # print(f'{loss=}')
+            # loss = loss_fn(v_mag.squeeze(), target_idx)
+            # print(f'{l=}')
+            # -------------------
+            # return
+            # loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-            # print(f"Batch {i+1}/{len(train_dl)}, loss: {loss.item():.3f}")
+            
+            predicted = net.predict(outputs).to(device)
+            # _, predicted = torch.max(outputs.data, 1)
+            total += target.size(0)
+            correct += (predicted == target_idx).sum().item()
         # Validation
         net.eval()
         running_val_loss = 0.0
         val_correct = 0
         val_total = 0
         with torch.no_grad():
-            for data in val_dl:
-                images, labels = data['image'].to(device), data['label'].to(device)
-                outputs = net(images)
-                val_loss = criterion(outputs, labels)
+            for i, data in enumerate(val_dl):
+                image = data['image']
+                image = image.to(device)
+                target_idx = data['label']
+                target_idx = target_idx.to(device)
+                target = one_hot(target_idx, n_classes).to(device)
+                outputs = net(image)
+                # val_loss = criterion(outputs, labels)
+                val_loss = net.loss(outputs, target, size_average=True)
+                # -------------------
+                # import torch.nn as nn
+                # loss_fn = nn.MultiMarginLoss(p=2, margin=0.9)
+                # print(f'{target_idx.shape=}')
+                # print(f'{outputs.shape=}')
+                # v_mag = torch.sqrt(torch.sum(outputs**2, dim=2, keepdim=True))
+                # print(f'{v_mag.shape=}')
+                # print(f'{loss=}')
+                # val_loss = loss_fn(v_mag.squeeze(), target_idx)
+                # print(f'{l=}')
+                # -------------------
                 running_val_loss += val_loss.item()
-                _, predicted = torch.max(outputs.data, 1)
-                val_total += labels.size(0)
-                val_correct += (predicted == labels).sum().item()
+
+                predicted = net.predict(outputs).to(device)
+                # _, predicted = torch.max(outputs.data, 1)
+                val_total += target.size(0)
+                val_correct += (predicted == target_idx).sum().item()
         
         avg_train_loss = running_loss / len(train_dl)
         avg_val_loss = running_val_loss / len(val_dl)
@@ -270,26 +313,33 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, config, device):
     print('Finished Training')
     return best_model
 
-def test_net(net, test_dl, device):
+def test_net(net, test_dl, n_classes, device):
     net.eval()
     correct = 0
     total = 0
-    predicted_labels = []
-    true_labels = []
+    predicted_targets = []
+    true_targets = []
     with torch.no_grad():
         for data in test_dl:
-            images, labels = data['image'].to(device), data['label'].to(device)
-            outputs = net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-            predicted_labels.extend(predicted.tolist())
-            true_labels.extend(labels.tolist())
+            image = data['image']
+            image = image.to(device)
+            target_idx = data['label']
+            target_idx = target_idx.to(device)
+            target = one_hot(target_idx, n_classes).to(device)
+            outputs = net(image)
+
+            predicted = net.predict(outputs)
+            predicted = predicted.to(device)
+            # _, predicted = torch.max(outputs.data, 1)
+            total += target.size(0)
+            correct += (predicted == target_idx).sum().item()
+            predicted_targets.extend(predicted.tolist())
+            true_targets.extend(target_idx.tolist())
     accuracy = correct / total
     print(f"Accuracy: {accuracy}")
     print('Classification Report:')
-    print(classification_report(true_labels, predicted_labels))
+    print(classification_report(true_targets, predicted_targets))
     print('Confusion Matrix:')
-    print(confusion_matrix(true_labels, predicted_labels))
+    print(confusion_matrix(true_targets, predicted_targets))
     
     print('Finished Testing')
