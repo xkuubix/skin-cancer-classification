@@ -36,25 +36,32 @@ torch.cuda.manual_seed(seed)
 
 # DATASET --------------------------------
 # Transforms
+img_size = config['dataset']['img_size']
+crop_size = 400
 transforms_train = A.Compose([
     # A.Affine(scale=(0.9, 1),
     #          shear=None,
     #          rotate=(-45, 45),
     #          p=1.),
+    A.CenterCrop(crop_size, crop_size, p=1.),
+    A.Resize(img_size, img_size),
     A.HorizontalFlip(p=0.5),
     A.VerticalFlip(p=0.5),
-    A.ShiftScaleRotate(p=0.5),
-    A.Rotate(limit=45, p=0.5),
-    A.RandomResizedCrop(224, 224, scale=(0.8, 1.0), ratio=(0.75, 1.3333333333333333), p=0.5),
-    # A.RandomGamma(p=0.5 ),
-    # A.GridDistortion(p=0.5),
+    # A.ShiftScaleRotate(p=0.5),
+    # A.RandomResizedCrop(img_size, img_size, scale=(0.8, 1.0), ratio=(0.75, 1.3333333333333333), p=0.5),
+    # A.RandomGamma(gamma_limit=(95, 105), p=0.5),
+    # A.GridDistortion(distort_limit=0.1, p=0.5),
     # A.RandomRotate90(p=0.5),
-    # A.ElasticTransform(p=0.5),
     # A.OpticalDistortion(p=0.5),
-    # A.RandomBrightnessContrast(p=0.5),
-    A.Resize(224, 224),
+    # A.RandomBrightnessContrast(brightness_limit=0.05, contrast_limit=0.05, p=0.5),
+    
+    # A.ElasticTransform(p=0.5),
+    # A.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5), p=1.0),
 ])
-transforms_val_test = A.Resize(224, 224)
+transforms_val_test = A.Compose([A.Resize(img_size, img_size),
+                                #  A.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5), p=1.0)
+                                ])
+                                 
 
 # Data split
 df = pd.read_csv(config['dir']['csv'])
@@ -68,6 +75,9 @@ train_df = utils.ungroup_df(train_df)
 val_df = utils.ungroup_df(val_df)
 test_df = utils.ungroup_df(test_df)
 
+# train_d = train_df.to_dict(orient='records')
+# train_d = utils.oversample_data(train_d)
+# train_df = pd.DataFrame(train_d)
 # Dataset
 train_ds = HAM10000(df=train_df, transform=transforms_train, mode='images')
 val_ds = HAM10000(df=val_df, transform=transforms_val_test ,mode='images')
@@ -91,7 +101,7 @@ train_dl = torch.utils.data.DataLoader(
     train_ds,
     batch_size=config['net_train']['batch_size'],
     sampler=sampler,
-    shuffle=True,
+    # shuffle=True,
     pin_memory=True, num_workers=14)
 val_dl = torch.utils.data.DataLoader(
     val_ds,
@@ -111,20 +121,39 @@ else:
 print(f"Device: {device}")
 
 # Set network, criterion, optimizer, scheduler
-net = models.resnet50(weights=ResNet50_Weights.DEFAULT)
+# net = models.resnet50(weights=ResNet50_Weights.DEFAULT)
 num_classes = len(train_df['dx'].unique())
-num_features = net.fc.in_features
-net.fc = nn.Linear(num_features, num_classes)
+# num_features = net.fc.in_features
+# net.fc = nn.Linear(num_features, num_classes)
 
+# Create capsule network.
+from model import FixCapsNet
+n_channels = 3
+conv_outputs = 128 #Feature_map
+num_primary_units = 8
+primary_unit_size = 16 * 6 * 6  # fixme get from conv2d
+output_unit_size = 16
+mode='DS'
+net = FixCapsNet(conv_inputs=n_channels,
+                 conv_outputs=conv_outputs,
+                 primary_units=num_primary_units,
+                 primary_unit_size=primary_unit_size,
+                 num_classes=num_classes,
+                 output_unit_size=16,
+                 init_weights=True,
+                 mode=mode)
+net.to(device=device)
 criterion = torch.nn.CrossEntropyLoss()
 
 optimizer = torch.optim.Adam(net.parameters(),
                              lr=config['net_train']['lr'],
                              weight_decay=config['net_train']['wd'])
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
+# scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
 
 # %%
-print(f"Optimizer: {optimizer}")
-net_dict = train_net(net, train_dl, val_dl, criterion, optimizer, config, device)
+# print(f"Optimizer: {optimizer}")
+torch.autograd.set_detect_anomaly(True)
+net_dict = train_net(net, train_dl, val_dl, criterion, optimizer, num_classes, config, device)
 net.load_state_dict(net_dict)
-test_net(net, test_dl, device)
+test_net(net, test_dl, num_classes, device)
+# %%
