@@ -1,11 +1,7 @@
-import os
-import typing
 import logging
-# import cv2
 import torch
 import pandas as pd
 import numpy as np
-from numpy import asarray
 from PIL import Image
 from collections import Counter
 from torch.utils.data import Dataset
@@ -64,8 +60,8 @@ class HAM10000(Dataset):
             image = Image.open(image_path)
             mask = Image.open(segmentation_path)
            
-            image = asarray(image)
-            mask = asarray(mask)
+            image = np.array(image)
+            mask = np.array(mask)
             # print(image.shape, mask.shape)
 
             if self._transform:
