@@ -18,6 +18,7 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, de
     patience = config['net_train']['patience']
     early_stop_counter = 0
     start_time = time.time()
+
     for epoch in range(config['net_train']['epochs']):
         net.train()
         running_loss = 0.0
@@ -29,30 +30,15 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, de
             image = image.to(device)
             target_idx = data['label']
             target_idx = target_idx.to(device)
-            target = one_hot(target_idx, n_classes).to(device)
             optimizer.zero_grad()
             outputs = net(image)
-            loss = net.loss(outputs, target, size_average=True)
-            # -------------------
-            import torch.nn as nn
-            # loss_fn = nn.MultiMarginLoss(p=2, margin=0.9)
-            # print(f'{target_idx.shape=}')
-            # print(f'{outputs.shape=}')
-            # v_mag = torch.sqrt(torch.sum(outputs**2, dim=2, keepdim=True))
-            # print(f'{v_mag.shape=}')
-            # print(f'{loss=}')
-            # loss = loss_fn(v_mag.squeeze(), target_idx)
-            # print(f'{l=}')
-            # -------------------
-            # return
-            # loss = criterion(outputs, labels)
+            loss = criterion(outputs.logits, target_idx)
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
-            
-            predicted = net.predict(outputs).to(device)
+            predicted = outputs.logits.argmax(-1)
             # _, predicted = torch.max(outputs.data, 1)
-            total += target.size(0)
+            total += target_idx.size(0)
             correct += (predicted == target_idx).sum().item()
         # Validation
         net.eval()
@@ -65,26 +51,12 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, de
                 image = image.to(device)
                 target_idx = data['label']
                 target_idx = target_idx.to(device)
-                target = one_hot(target_idx, n_classes).to(device)
                 outputs = net(image)
-                # val_loss = criterion(outputs, labels)
-                val_loss = net.loss(outputs, target, size_average=True)
-                # -------------------
-                # import torch.nn as nn
-                # loss_fn = nn.MultiMarginLoss(p=2, margin=0.9)
-                # print(f'{target_idx.shape=}')
-                # print(f'{outputs.shape=}')
-                # v_mag = torch.sqrt(torch.sum(outputs**2, dim=2, keepdim=True))
-                # print(f'{v_mag.shape=}')
-                # print(f'{loss=}')
-                # val_loss = loss_fn(v_mag.squeeze(), target_idx)
-                # print(f'{l=}')
-                # -------------------
+                val_loss = criterion(outputs.logits, target_idx)
                 running_val_loss += val_loss.item()
-
-                predicted = net.predict(outputs).to(device)
+                predicted = outputs.logits.argmax(-1)
                 # _, predicted = torch.max(outputs.data, 1)
-                val_total += target.size(0)
+                val_total += target_idx.size(0)
                 val_correct += (predicted == target_idx).sum().item()
         
         avg_train_loss = running_loss / len(train_dl)
@@ -94,8 +66,8 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, de
 
         end_time = time.time()
         total_time = end_time - start_time
-        print(f"Epoch {epoch+1}, train-loss: {avg_train_loss:.3f}, val-loss: {avg_val_loss:.3f}, train-accuracy: {train_accuracy:.3f}, val-accuracy: {val_accuracy:.3f}", end=' ')
-        print(f"Time taken: {total_time//60:4.0f}:{total_time%60:2.0f}")
+        print(f"Epoch {epoch+1 :3}/{config['net_train']['epochs']}, train-loss: {avg_train_loss:.3f}, val-loss: {avg_val_loss:.3f}, train-acc: {train_accuracy:.3f}, val-acc: {val_accuracy:.3f}", end=' ')
+        print(f"Time taken: {total_time//60:3.0f}m {total_time%60:02.0f}s")
 
         # Early stopping
         if avg_val_loss < best_val_loss:
@@ -126,7 +98,7 @@ def test_net(net, test_dl, n_classes, device):
             target = one_hot(target_idx, n_classes).to(device)
             outputs = net(image)
 
-            predicted = net.predict(outputs)
+            predicted = outputs.logits.argmax(-1)
             predicted = predicted.to(device)
             # _, predicted = torch.max(outputs.data, 1)
             total += target.size(0)
