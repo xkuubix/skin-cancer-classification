@@ -47,22 +47,11 @@ class HAM10000(Dataset):
         label = self.mapping_handler._convert(label_str)
         if self.mode == 'images':
             # Load images from paths, map label
-
-            # image = Image.open(image_path)
-            # mask = Image.open(segmentation_path)
-
-            # image = cv2.imread(image_path)
-            # mask = cv2.imread(segmentation_path)
-            # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            # image = cv2.resize(image, (224, 224))
-            # mask = cv2.resize(mask, (224, 224))
-
             image = Image.open(image_path)
             mask = Image.open(segmentation_path)
            
             image = np.array(image)
             mask = np.array(mask)
-            # print(image.shape, mask.shape)
 
             if self._transform:
                 transformed = self._transform(image=image, mask=mask)
