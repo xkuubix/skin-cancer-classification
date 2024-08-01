@@ -34,7 +34,7 @@ class HAM10000(Dataset):
         msg += pretty_dict_str(Counter(self._df['dx']))
         logger.info(msg)
         self.mode = mode
-        if self.mode not in ['images', 'radiomics']:
+        if self.mode not in ['images', 'radiomics', 'hybrid']:
             raise ValueError("Invalid mode")
         logger.info(f'Dataset Mode: {self.mode}')
 
@@ -45,7 +45,9 @@ class HAM10000(Dataset):
         segmentation_path = self._df.iloc[index]['seg_path']
         label_str = self._df.iloc[index]['dx']
         label = self.mapping_handler._convert(label_str)
-        if self.mode == 'images':
+        data_dict_im = {}
+        data_dict_rad = {}
+        if self.mode in ['images', 'hybrid']:
             # Load images from paths, map label
             image = Image.open(image_path)
             mask = Image.open(segmentation_path)
@@ -64,7 +66,7 @@ class HAM10000(Dataset):
             label = torch.from_numpy(np.array(label)).long()
             image = image / 255.0
 
-            data_dict = {
+            data_dict_im = {
                 'image': image,
                 'mask': mask,
                 'label': label,
@@ -72,12 +74,12 @@ class HAM10000(Dataset):
                 'seg_path': segmentation_path,
                 'label_str': label_str
                 }
-        elif self.mode == 'radiomics':
-
+        if self.mode in ['radiomics', 'hybrid']:
+            label = torch.from_numpy(np.array(label)).long()
             features = self._df.iloc[index].drop(self._df.columns[0:10])
-            features_names = self._df.columns[10:]
+            features_names = self._df.columns[10:].to_list()
             features = torch.tensor(np.array(features, dtype=np.float32), dtype=torch.float32)
-            data_dict = {
+            data_dict_rad = {
                 'label': label,
                 'img_path': image_path,
                 'seg_path': segmentation_path,
@@ -85,7 +87,7 @@ class HAM10000(Dataset):
                 'features': features,
                 'features_names': features_names
                 }
-        return data_dict
+        return dict(data_dict_im, **data_dict_rad)
     
     def __len__(self):
         return len(self._df)
