@@ -29,7 +29,7 @@ class HAM10000(Dataset):
         """
         self._df = df
         self._transform = transform
-        self.mapping_handler = MappingHandler()
+        self.mapping_handler = MappingHandler(binary=True)
         msg = 'Initialized - class distribution:'
         msg += pretty_dict_str(Counter(self._df['dx']))
         logger.info(msg)
@@ -63,7 +63,7 @@ class HAM10000(Dataset):
             image = image.transpose(2, 0, 1)
             # mask = mask.transpose(2, 0, 1)
             image = torch.from_numpy(image).float()
-            label = torch.from_numpy(np.array(label)).long()
+            label = torch.from_numpy(np.array(label)).float()
             image = image / 255.0
 
             data_dict_im = {
@@ -75,7 +75,7 @@ class HAM10000(Dataset):
                 'label_str': label_str
                 }
         if self.mode in ['radiomics', 'hybrid']:
-            label = torch.from_numpy(np.array(label)).long()
+            label = torch.from_numpy(np.array(label)).float()
             features = self._df.iloc[index].drop(self._df.columns[0:10])
             features_names = self._df.columns[10:].to_list()
             features = torch.tensor(np.array(features, dtype=np.float32), dtype=torch.float32)
@@ -94,15 +94,26 @@ class HAM10000(Dataset):
 
 
 class MappingHandler:
-    def __init__(self):
-        self.mapping = {
-            "AKIEC": 0,
-            "BCC": 1,
-            "BKL": 2,
-            "DF": 3,
-            "MEL": 4,
-            "NV": 5,
-            "VASC": 6
+    def __init__(self, binary=False):
+        if not binary:
+            self.mapping = {
+                "AKIEC": 0,
+                "BCC": 1,
+                "BKL": 2,
+                "DF": 3,
+                "MEL": 4,
+                "NV": 5,
+                "VASC": 6
+                }
+        elif binary:
+            self.mapping = {
+                "AKIEC": 1.,
+                "BCC": 1.,
+                "BKL": 0.,
+                "DF": 0.,
+                "MEL": 1.,
+                "NV": 0.,
+                "VASC": 0.
             }
 
     def _convert(self, arg):
