@@ -25,19 +25,22 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, de
         correct = 0
         total = 0
         for i, data in enumerate(train_dl):
-            image = data['image']
-            # print(torch.mean(image, dim=0), torch.std(image, dim=0))
-            image = image.to(device)
-            target_idx = data['label']
-            target_idx = target_idx.to(device)
+            image = data['image'].to(device)
+            radiomic_features = data['features'].to(device)
+            target_idx = data['label'].to(device)
+
             optimizer.zero_grad()
-            outputs = net(image)
-            loss = criterion(outputs.logits, target_idx)
+            outputs = net(image, radiomic_features)
+            if config['net_train']['criterion'] == 'bce':
+                predicted = torch.round(torch.sigmoid(outputs.reshape(-1)))
+                outputs = torch.sigmoid(outputs).reshape(-1)
+            elif config['net_train']['criterion'] == 'ce':
+                _, predicted = torch.max(outputs.data, 1)
+            loss = criterion(outputs, target_idx)
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
-            predicted = outputs.logits.argmax(-1)
-            # _, predicted = torch.max(outputs.data, 1)
+            # predicted = outputs.logits.argmax(-1)
             total += target_idx.size(0)
             correct += (predicted == target_idx).sum().item()
         # Validation
@@ -47,15 +50,17 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, de
         val_total = 0
         with torch.no_grad():
             for i, data in enumerate(val_dl):
-                image = data['image']
-                image = image.to(device)
-                target_idx = data['label']
-                target_idx = target_idx.to(device)
-                outputs = net(image)
-                val_loss = criterion(outputs.logits, target_idx)
+                image = data['image'].to(device)
+                radiomic_features = data['features'].to(device)
+                target_idx = data['label'].to(device)
+                outputs = net(image, radiomic_features)
+                if config['net_train']['criterion'] == 'bce':
+                    predicted = torch.round(torch.sigmoid(outputs.reshape(-1)))
+                    outputs = torch.sigmoid(outputs).reshape(-1)
+                elif config['net_train']['criterion'] == 'ce':
+                    _, predicted = torch.max(outputs.data, 1)
+                val_loss = criterion(outputs, target_idx)
                 running_val_loss += val_loss.item()
-                predicted = outputs.logits.argmax(-1)
-                # _, predicted = torch.max(outputs.data, 1)
                 val_total += target_idx.size(0)
                 val_correct += (predicted == target_idx).sum().item()
         
@@ -83,7 +88,7 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, de
     print('Finished Training')
     return best_model
 
-def test_net(net, test_dl, n_classes, device):
+def test_net(net, test_dl, config, device):
     net.eval()
     correct = 0
     total = 0
@@ -91,17 +96,16 @@ def test_net(net, test_dl, n_classes, device):
     true_targets = []
     with torch.no_grad():
         for data in test_dl:
-            image = data['image']
-            image = image.to(device)
-            target_idx = data['label']
-            target_idx = target_idx.to(device)
-            target = one_hot(target_idx, n_classes).to(device)
-            outputs = net(image)
-
-            predicted = outputs.logits.argmax(-1)
+            image = data['image'].to(device)
+            radiomic_features = data['features'].to(device)
+            target_idx = data['label'].to(device)
+            outputs = net(image, radiomic_features)
+            if config['net_train']['criterion'] == 'bce':
+                predicted = torch.round(torch.sigmoid(outputs.reshape(-1)))
+            elif config['net_train']['criterion'] == 'ce':
+                _, predicted = torch.max(outputs.data, 1)
             predicted = predicted.to(device)
-            # _, predicted = torch.max(outputs.data, 1)
-            total += target.size(0)
+            total += target_idx.size(0)
             correct += (predicted == target_idx).sum().item()
             predicted_targets.extend(predicted.tolist())
             true_targets.extend(target_idx.tolist())
