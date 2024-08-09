@@ -1,10 +1,12 @@
 import os
+import torch
 import random
 import typing
 import logging
 import argparse
+import numpy as np
 import pandas as pd
-
+from torch.utils.data import WeightedRandomSampler
 
 logger = logging.getLogger(__name__)
 
@@ -198,3 +200,27 @@ def undersample_data(data, key_to_use='dx', seed=42, multiplier=1.0):
                 f"\nTotal instances:{sum(k_counts.values())}")
 
     return undersampled_data
+
+
+def generate_sampler(target):
+    """
+    Generate a weighted random sampler based on the target array.
+
+    Parameters:
+    - target (numpy.ndarray): The target array containing class labels.
+
+    Returns:
+    - sampler (torch.utils.data.sampler.WeightedRandomSampler): The weighted random sampler object.
+    """
+
+    class_sample_count = np.array(
+        [len(np.where(target == t)[0]) for t in np.unique(target)])
+    weight = 1. / class_sample_count
+    samples_weight = np.array([weight[t] for t in target])
+
+    samples_weight = torch.from_numpy(samples_weight)
+    samples_weight = samples_weight.double()
+    sampler = WeightedRandomSampler(samples_weight,
+                                    len(samples_weight),
+                                    replacement=True)
+    return sampler
