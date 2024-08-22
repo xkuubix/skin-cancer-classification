@@ -117,3 +117,4 @@ def test_net(net, test_dl, config, device):
     print(confusion_matrix(true_targets, predicted_targets))
     
     print('Finished Testing')
+    return classification_report(true_targets, predicted_targets, output_dict=True)
