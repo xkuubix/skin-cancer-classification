@@ -26,7 +26,10 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, de
         total = 0
         for i, data in enumerate(train_dl):
             image = data['image'].to(device)
-            radiomic_features = data['features'].to(device)
+            if config['dataset']['mode'] in ['radiomics', 'hybrid']:
+                radiomic_features = data['features'].to(device)
+            else:
+                radiomic_features = None
             target_idx = data['label'].to(device)
 
             optimizer.zero_grad()
@@ -51,7 +54,10 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, de
         with torch.no_grad():
             for i, data in enumerate(val_dl):
                 image = data['image'].to(device)
-                radiomic_features = data['features'].to(device)
+                if config['dataset']['mode'] in ['radiomics', 'hybrid']:
+                    radiomic_features = data['features'].to(device)
+                else:
+                    radiomic_features = None
                 target_idx = data['label'].to(device)
                 outputs = net(image, radiomic_features)
                 if config['net_train']['criterion'] == 'bce':
@@ -97,7 +103,10 @@ def test_net(net, test_dl, config, device):
     with torch.no_grad():
         for data in test_dl:
             image = data['image'].to(device)
-            radiomic_features = data['features'].to(device)
+            if config['dataset']['mode'] in ['radiomics', 'hybrid']:
+                radiomic_features = data['features'].to(device)
+            else:
+                radiomic_features = None
             target_idx = data['label'].to(device)
             outputs = net(image, radiomic_features)
             if config['net_train']['criterion'] == 'bce':
