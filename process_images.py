@@ -6,8 +6,8 @@ import os
 import matplotlib.pyplot as plt
 
 
-dir_imag = "/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_Images_resized"
-dir_to_save = "/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_Images_resized_no_hair"
+dir_imag = "/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_Images"
+dir_to_save = "/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_Images_no_hair"
 
 def plot_image(dir_imag, index):
     files_imag = sorted(os.listdir(dir_imag))
@@ -27,7 +27,7 @@ def plot_image(dir_imag, index):
 def save_image(dir_imag, dir_to_save, file):
     if not os.path.exists(dir_to_save):
         os.makedirs(dir_to_save)
-        print("Directory ", dir_to_save, " Created ")
+        print("Created new directory: ", dir_to_save)
     image = cv2.imread(os.path.join(dir_imag, file), cv2.IMREAD_COLOR)
     processed_image = hair_removal(image)
     # print("Saving image ", end='~ ')
@@ -55,7 +55,10 @@ if 0:
         plot_image(dir_imag, item)
 
 # saving
+i = 0
 if 1:
     for file in sorted(os.listdir(dir_imag)):
         save_image(dir_imag, dir_to_save, file)
+        i += 1
+print(f"Saved {i} images at {dir_to_save}")
 # %%
