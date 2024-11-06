@@ -35,10 +35,23 @@ df = pd.read_csv(config['dir']['csv'])
 df = utils.insert_paths_df(df, config['dir']['img'], config['dir']['seg'])
 df = utils.group_df(df)
 
-train_df, val_df, test_df = utils.random_split_df(df,
-                                                  config['dataset']['split_fraction_train_rest'],
-                                                  config['dataset']['split_fraction_val_test'],
-                                                  seed=seed)
+test_df = pd.read_csv(config['dir']['csv_test'])
+test_df = utils.insert_paths_df(test_df, config['dir']['img_test'], config['dir']['seg_test'])
+test_df = utils.group_df(test_df)
+
+from sklearn.model_selection import train_test_split
+
+fraction = config['dataset']['split_fraction_train_rest']
+
+# Perform the split
+train_df, val_df = train_test_split(df, test_size=1-fraction, random_state=seed)
+
+
+
+# train_df, val_df,  = utils.random_split_df(df,
+                                                #   config['dataset']['split_fraction_train_rest'],
+                                                #   config['dataset']['split_fraction_val_test'],
+                                                #   seed=seed)
 # %%
 train_df = utils.ungroup_df(train_df)
 val_df = utils.ungroup_df(val_df)
@@ -72,26 +85,33 @@ if config['dataset']['train_sampling']['method'] == 'oversample':
     ])
 elif config['dataset']['train_sampling']['method'] == 'undersample':
     train_d = utils.undersample_data(train_d, seed=seed, multiplier=config['dataset']['train_sampling']['multiplier'])
-    transforms_train = None
+    transforms_train = A.Compose([])
 elif config['dataset']['train_sampling']['method'] == 'none':
-    transforms_train = None
-transforms_val_test = None
+    transforms_train = A.Compose([])
+
+transforms_val_test = A.Compose([])
+
+
 # %%
 if config['radiomics']['extract']:
     extractor_train = RadiomicsExtractor(param_file='params.yml',
                                          transforms=transforms_train,
                                          remove_hair=True)
-    extractor_val_test = RadiomicsExtractor(param_file='params.yml',
+    extractor_val = RadiomicsExtractor(param_file='params.yml',
                                             transforms=transforms_val_test,
                                             remove_hair=True)
+    extractor_test = RadiomicsExtractor(param_file='params.yml',
+                                            transforms=transforms_val_test,
+                                            remove_hair=False)
+    
     if config['radiomics']['mode'] == 'parallel':
         results_train = extractor_train.parallell_extraction(train_d)
-        results_val = extractor_val_test.parallell_extraction(val_d)
-        results_test = extractor_val_test.parallell_extraction(test_d)
+        results_val = extractor_val.parallell_extraction(val_d)
+        results_test = extractor_test.parallell_extraction(test_d)
     elif config['radiomics']['mode'] == 'serial':
         results_train = extractor_train.serial_extraction(train_d)
-        results_val = extractor_val_test.serial_extraction(val_d)
-        results_test = extractor_val_test.serial_extraction(test_d)
+        results_val = extractor_val.serial_extraction(val_d)
+        results_test = extractor_test.serial_extraction(test_d)
     
     train_df = pd.DataFrame(train_d)
     train_df = pd.concat([train_df, pd.DataFrame(results_train)], axis=1)
