@@ -1,14 +1,16 @@
-from radiomics import featureextractor
+import cv2
+import numpy as np
 import SimpleITK as sitk
 import multiprocessing
 import time
-from multiprocessing import Pool
-import logging
-logger = logging.getLogger(__name__)
 from tqdm import tqdm, trange
+import logging
+from multiprocessing import Pool
+from radiomics import featureextractor
 from utils import pretty_dict_str
-import cv2
-import numpy as np
+
+logger = logging.getLogger(__name__)
+
 
 class RadiomicsExtractor():
     """
@@ -65,6 +67,8 @@ class RadiomicsExtractor():
         else:
             pass
         
+        import albumentations as A
+        self.transforms = A.Compose([A.Resize(256, 256)])
 
         if self.transforms:
             transformed = self.transforms(image=im, mask=sg)
@@ -116,7 +120,7 @@ class RadiomicsExtractor():
 
 
     def parallell_extraction(self, list_of_dicts: list, n_processes = None):
-        logger.info(f"Extraction mode: parallel")
+        logger.info("Extraction mode: parallel")
         if n_processes is None:
             n_processes = multiprocessing.cpu_count() - 1
         start_time = time.time()
@@ -132,7 +136,7 @@ class RadiomicsExtractor():
     
 
     def serial_extraction(self, list_of_dicts: list):
-        logger.info(f"Extraction mode: serial")
+        logger.info("Extraction mode: serial")
         all_results = []
             # for item in trange(len(train_df)):
         start_time = time.time()
