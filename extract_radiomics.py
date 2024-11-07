@@ -1,17 +1,17 @@
 # %% IMPORTS AND SETTINGS
 import yaml
 import pickle
-import os
 import torch
-import numpy as np
-import pandas as pd
 import utils
 import logging
-from RadiomicsExtractor import RadiomicsExtractor
-from Dataset import HAM10000
+import numpy as np
+import pandas as pd
 import datetime
 import albumentations as A
-import pickle
+from sklearn.model_selection import train_test_split
+
+from Dataset import HAM10000
+from RadiomicsExtractor import RadiomicsExtractor
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -39,7 +39,6 @@ test_df = pd.read_csv(config['dir']['csv_test'])
 test_df = utils.insert_paths_df(test_df, config['dir']['img_test'], config['dir']['seg_test'])
 test_df = utils.group_df(test_df)
 
-from sklearn.model_selection import train_test_split
 
 fraction = config['dataset']['split_fraction_train_rest']
 
@@ -66,22 +65,22 @@ if config['dataset']['train_sampling']['method'] == 'oversample':
     train_original = train_d
     train_d = utils.oversample_data(train_d)
     transforms_train = A.Compose([
-        A.Affine(scale=(0.9, 1),
-                 shear=(-10, 10),
-                 rotate=(-45, 45),
-                 p=1.),
-        A.HorizontalFlip(p=0.5),
-        A.VerticalFlip(p=0.5),
-        # A.GaussNoise(p=0.5),
-        A.CLAHE(p=0.5),
-        # A.RandomBrightnessContrast(brightness_limit=0.1,
-        #                            contrast_limit=0.1,
-        #                            p=0.5),
-        A.OneOf([
-            A.OpticalDistortion(p=0.3),
-            A.GridDistortion(distort_limit=0.1, p=0.7),
-        ], p=0.5),
-        A.Normalize(),
+        # A.Affine(scale=(0.9, 1),
+        #          shear=(-10, 10),
+        #          rotate=(-45, 45),
+        #          p=1.),
+        # A.HorizontalFlip(p=0.5),
+        # A.VerticalFlip(p=0.5),
+        # # A.GaussNoise(p=0.5),
+        # A.CLAHE(p=0.5),
+        # # A.RandomBrightnessContrast(brightness_limit=0.1,
+        # #                            contrast_limit=0.1,
+        # #                            p=0.5),
+        # A.OneOf([
+        #     A.OpticalDistortion(p=0.3),
+        #     A.GridDistortion(distort_limit=0.1, p=0.7),
+        # ], p=0.5),
+        # A.Normalize(),
     ])
 elif config['dataset']['train_sampling']['method'] == 'undersample':
     train_d = utils.undersample_data(train_d, seed=seed, multiplier=config['dataset']['train_sampling']['multiplier'])
@@ -90,16 +89,16 @@ elif config['dataset']['train_sampling']['method'] == 'none':
     transforms_train = A.Compose([])
 
 transforms_val_test = A.Compose([])
-
-
+transforms_train = None
+transforms_val_test = None
 # %%
 if config['radiomics']['extract']:
     extractor_train = RadiomicsExtractor(param_file='params.yml',
                                          transforms=transforms_train,
-                                         remove_hair=True)
+                                         remove_hair=False)
     extractor_val = RadiomicsExtractor(param_file='params.yml',
                                             transforms=transforms_val_test,
-                                            remove_hair=True)
+                                            remove_hair=False)
     extractor_test = RadiomicsExtractor(param_file='params.yml',
                                             transforms=transforms_val_test,
                                             remove_hair=False)
