@@ -66,9 +66,6 @@ class RadiomicsExtractor():
             im = self._hair_removal(im)
         else:
             pass
-        
-        import albumentations as A
-        self.transforms = A.Compose([A.Resize(256, 256)])
 
         if self.transforms:
             transformed = self.transforms(image=im, mask=sg)
@@ -96,7 +93,10 @@ class RadiomicsExtractor():
             g = sitk.GetImageFromArray(g)
             b = sitk.GetImageFromArray(b)
 
-            dicts = [self.extractor.execute(r, sg, label=label), self.extractor.execute(g, sg, label=label), self.extractor.execute(b, sg, label=label)]
+            dicts = [self.extractor.execute(r, sg, label=label),
+                     self.extractor.execute(g, sg, label=label),
+                     self.extractor.execute(b, sg, label=label)]
+ 
             big_dict = {}
             for i, d in enumerate(dicts):
                 for k, v in d.items():

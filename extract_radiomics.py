@@ -80,7 +80,8 @@ if config['dataset']['train_sampling']['method'] == 'oversample':
         #     A.OpticalDistortion(p=0.3),
         #     A.GridDistortion(distort_limit=0.1, p=0.7),
         # ], p=0.5),
-        # A.Normalize(),
+        A.Resize(256, 256),
+        A.Normalize(mean=0.0, std=1.0)
     ])
 elif config['dataset']['train_sampling']['method'] == 'undersample':
     train_d = utils.undersample_data(train_d, seed=seed, multiplier=config['dataset']['train_sampling']['multiplier'])
@@ -88,9 +89,25 @@ elif config['dataset']['train_sampling']['method'] == 'undersample':
 elif config['dataset']['train_sampling']['method'] == 'none':
     transforms_train = A.Compose([])
 
-transforms_val_test = A.Compose([])
-transforms_train = None
-transforms_val_test = None
+
+# not resized
+# Mean (RGB): [0.7652978  0.5476034  0.57196146]
+# Standard Deviation (RGB): [0.14053943 0.1533344  0.1710358 ]
+
+# resized
+# Mean (RGB): [0.76530149 0.54760609 0.5719637 ]
+# Standard Deviation (RGB): [0.14010777 0.15290574 0.17048959]
+
+transforms_train = A.Compose([
+        A.Resize(256, 256),
+        A.Normalize([0.76530149, 0.54760609, 0.5719637], [0.14010777, 0.15290574, 0.17048959])
+])
+
+transforms_val_test = A.Compose([
+        A.Resize(256, 256),
+        A.Normalize([0.76530149, 0.54760609, 0.5719637], [0.14010777, 0.15290574, 0.17048959])
+])
+
 # %%
 if config['radiomics']['extract']:
     extractor_train = RadiomicsExtractor(param_file='params.yml',
