@@ -29,7 +29,7 @@ class HAM10000(Dataset):
         """
         self._df = df
         self._transform = transform
-        self.mapping_handler = MappingHandler(binary=True)
+        self.mapping_handler = MappingHandler(binary=False)
         msg = 'Initialized - class distribution:'
         msg += pretty_dict_str(Counter(self._df['dx']))
         logger.info(msg)
@@ -63,8 +63,8 @@ class HAM10000(Dataset):
             image = image.transpose(2, 0, 1)
             # mask = mask.transpose(2, 0, 1)
             image = torch.from_numpy(image).float()
-            label = torch.from_numpy(np.array(label)).float()
-            image = image / 255.0
+            label = torch.from_numpy(np.array(label)).long()
+            # image = image / 255.0
 
             data_dict_im = {
                 'image': image,
@@ -75,7 +75,7 @@ class HAM10000(Dataset):
                 'label_str': label_str
                 }
         if self.mode in ['radiomics', 'hybrid']:
-            label = torch.from_numpy(np.array(label)).float()
+            label = torch.from_numpy(np.array(label)).long()
             features = self._df.iloc[index].drop(self._df.columns[0:10])
             features_names = self._df.columns[10:].to_list()
             features = torch.tensor(np.array(features, dtype=np.float32), dtype=torch.float32)
