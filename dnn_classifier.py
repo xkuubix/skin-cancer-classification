@@ -1,25 +1,22 @@
 # %% IMPORTS AND SETTINGS
 import yaml
+import pickle
 import torch
 import numpy as np
 import pandas as pd
 import utils
+from net_utils import train_net, test_net
 import logging
-import torch.nn as nn
 import albumentations as A
-from Dataset import HAM10000
-from Dataset import MappingHandler
-from torchvision import models
-from torch.utils.data import WeightedRandomSampler
-from torchvision.models import ResNet18_Weights
-from torchvision.models import resnet50, ResNet50_Weights
-
+from Dataset import HAM10000, MappingHandler
+from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LassoCV
+from model import *
 # TODO dodać neptune albo w&b
-from utils import train_net, test_net
 
 
 logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.INFO)
 logging.basicConfig(level=logging.ERROR)
 
 # MAKE PARSER AND LOAD PARAMS FROM CONFIG FILE--------------------------------
@@ -35,125 +32,204 @@ torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 
 # DATASET --------------------------------
-# Transforms
 img_size = config['dataset']['img_size']
-crop_size = 400
+crop_size = 256
 transforms_train = A.Compose([
-    # A.Affine(scale=(0.9, 1),
-    #          shear=None,
-    #          rotate=(-45, 45),
-    #          p=1.),
-    A.CenterCrop(crop_size, crop_size, p=1.),
-    A.Resize(img_size, img_size),
+    A.RandomResizedCrop(crop_size, crop_size, scale=(0.8, 1.0), ratio=(0.75, 1.3333333333333333), p=1.0),
     A.HorizontalFlip(p=0.5),
     A.VerticalFlip(p=0.5),
-    # A.ShiftScaleRotate(p=0.5),
-    # A.RandomResizedCrop(img_size, img_size, scale=(0.8, 1.0), ratio=(0.75, 1.3333333333333333), p=0.5),
-    # A.RandomGamma(gamma_limit=(95, 105), p=0.5),
-    # A.GridDistortion(distort_limit=0.1, p=0.5),
-    # A.RandomRotate90(p=0.5),
-    # A.OpticalDistortion(p=0.5),
-    # A.RandomBrightnessContrast(brightness_limit=0.05, contrast_limit=0.05, p=0.5),
-    
-    # A.ElasticTransform(p=0.5),
-    # A.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5), p=1.0),
-])
-transforms_val_test = A.Compose([A.Resize(img_size, img_size),
-                                #  A.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5), p=1.0)
-                                ])
-                                 
+    A.ShiftScaleRotate(p=0.5),
+    A.GridDistortion(distort_limit=0.1, p=0.5),
+    A.ColorJitter(p=0.5),
+    A.GaussNoise(p=0.5),
+    A.Resize(img_size, img_size),
+    A.Normalize([0.76530149, 0.54760609, 0.5719637], [0.14010777, 0.15290574, 0.17048959],
+                always_apply=True),
+    # A.Resize(img_size, img_size),
+    # A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], always_apply=True)
+    ])
 
-# Data split
-df = pd.read_csv(config['dir']['csv'])
-df = utils.insert_paths_df(df, config['dir']['img'], config['dir']['seg'])
-df = utils.group_df(df)
-train_df, val_df, test_df = utils.random_split_df(df,
-                                                  config['dataset']['split_fraction_train_rest'],
-                                                  config['dataset']['split_fraction_val_test'],
-                                                  seed=seed)
-train_df = utils.ungroup_df(train_df)
-val_df = utils.ungroup_df(val_df)
-test_df = utils.ungroup_df(test_df)
+transforms_val_test = A.Compose([
+    A.Resize(img_size, img_size),
+    A.Normalize([0.76530149, 0.54760609, 0.5719637], [0.14010777, 0.15290574, 0.17048959],
+                always_apply=True),
+    # A.Resize(img_size, img_size),
+    # A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], always_apply=True)
+    ])
 
-# train_d = train_df.to_dict(orient='records')
-# train_d = utils.oversample_data(train_d)
-# train_df = pd.DataFrame(train_d)
 # Dataset
-train_ds = HAM10000(df=train_df, transform=transforms_train, mode='images')
-val_ds = HAM10000(df=val_df, transform=transforms_val_test ,mode='images')
-test_ds = HAM10000(df=test_df, transform=transforms_val_test, mode='images')
+with open(config['dir']['pkl_train'], 'rb') as handle:
+    train_df = pickle.load(handle)
+    logger.info(f"Loaded radiomics features (train) from {config['dir']['pkl_train']}")
+with open(config['dir']['pkl_val'], 'rb') as handle:
+    val_df = pickle.load(handle)
+    logger.info(f"Loaded radiomics features (val) from {config['dir']['pkl_val']}")
+with open(config['dir']['pkl_test'], 'rb') as handle:
+    test_df = pickle.load(handle)
+    logger.info(f"Loaded radiomics features (test) from {config['dir']['pkl_test']}")
 
-# Sampler
 mapping_handler = MappingHandler().mapping
-target = [mapping_handler[label.upper()] for label in train_df['dx'].values]
-class_sample_count = np.array(
-    [len(np.where(target == t)[0]) for t in np.unique(target)])
-weight = 1. / class_sample_count
-samples_weight = np.array([weight[t] for t in target])
-
-samples_weight = torch.from_numpy(samples_weight)
-samples_weigth = samples_weight.double()
-sampler = WeightedRandomSampler(samples_weight,
-                                len(samples_weight), # num_samples drawn each epoch
-                                replacement=True)
-# Data loaders
-train_dl = torch.utils.data.DataLoader(
-    train_ds,
-    batch_size=config['net_train']['batch_size'],
-    sampler=sampler,
-    # shuffle=True,
-    pin_memory=True, num_workers=14)
-val_dl = torch.utils.data.DataLoader(
-    val_ds,
-    batch_size=config['net_train']['batch_size'],
-    shuffle=False, pin_memory=True, num_workers=14)
-test_dl = torch.utils.data.DataLoader(
-    test_ds, batch_size=config['net_train']['batch_size'],
-    shuffle=False, pin_memory=True, num_workers=14)
-
 # %%
-# TRAINING LOOP --------------------------------
-# Set device
-if torch.cuda.is_available():
-    device = config['device']
-else:
-    device = 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Device: {device}")
 
-# Set network, criterion, optimizer, scheduler
-# net = models.resnet50(weights=ResNet50_Weights.DEFAULT)
-num_classes = len(train_df['dx'].unique())
-# num_features = net.fc.in_features
-# net.fc = nn.Linear(num_features, num_classes)
+num_classes = 1 if config['net_train']['criterion'] == 'bce' else len(train_df['dx'].unique())
 
-# Create capsule network.
-from model import FixCapsNet
-n_channels = 3
-conv_outputs = 128 #Feature_map
-num_primary_units = 8
-primary_unit_size = 16 * 6 * 6  # fixme get from conv2d
-output_unit_size = 16
-mode='DS'
-net = FixCapsNet(conv_inputs=n_channels,
-                 conv_outputs=conv_outputs,
-                 primary_units=num_primary_units,
-                 primary_unit_size=primary_unit_size,
-                 num_classes=num_classes,
-                 output_unit_size=16,
-                 init_weights=True,
-                 mode=mode)
-net.to(device=device)
-criterion = torch.nn.CrossEntropyLoss()
-
-optimizer = torch.optim.Adam(net.parameters(),
-                             lr=config['net_train']['lr'],
-                             weight_decay=config['net_train']['wd'])
-# scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
+df = pd.concat([train_df, val_df], ignore_index=True)
+scaler = StandardScaler()
 
 # %%
-# print(f"Optimizer: {optimizer}")
-torch.autograd.set_detect_anomaly(True)
-net_dict = train_net(net, train_dl, val_dl, criterion, optimizer, num_classes, config, device)
-net.load_state_dict(net_dict)
-test_net(net, test_dl, num_classes, device)
+lasso = LassoCV(cv=5, random_state=seed,
+                max_iter=10000, tol=0.001)
+X = scaler.fit_transform(df[df.columns[10:]])
+y = [int(mapping_handler[label.upper()]) for label in df['dx'].values]
+lasso.fit(X, y)
+
+selected_features = df.columns[10:][lasso.coef_ != 0]
+
+radiomic_featre_size = len(selected_features)
+print(f"Selected {radiomic_featre_size} features")
+    
+if config['net_train']['criterion'] == 'bce':
+    criterion = torch.nn.BCELoss()
+elif config['net_train']['criterion'] == 'ce':
+    criterion = torch.nn.CrossEntropyLoss()
+
+# %%
+# Select only features selected by Lasso and Standardize
+df[df.columns[10:]] = scaler.transform(df[df.columns[10:]])
+first_10_columns = df.columns[:10]
+remaining_columns = [col for col in df.columns[10:] if col in selected_features]
+columns_to_keep = list(first_10_columns) + remaining_columns
+df = df[columns_to_keep]
+
+test_df[test_df.columns[10:]] = scaler.transform(test_df[test_df.columns[10:]])
+df2 = test_df
+first_10_columns = df2.columns[:10]
+remaining_columns = [col for col in df2.columns[10:] if col in selected_features]
+columns_to_keep = list(first_10_columns) + remaining_columns
+test_df = df2[columns_to_keep]
+# %%
+# K-Fold Cross Validation
+fold_results = []
+k = config['dataset']['k_folds']
+# kf = KFold(n_splits=k, shuffle=True, random_state=seed)
+kf = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
+kf.get_n_splits(df)
+for i, (train_idx, val_idx) in enumerate(kf.split(df, df['dx'])):
+    train_fold = df.iloc[train_idx]
+    val_fold = df.iloc[val_idx]
+    print('--------------------------------')
+    print(f"Fold {i}:")
+    print(f"  Train: len={len(train_idx)}")
+    print(df.iloc[train_idx]['dx'].value_counts(normalize=True))        
+    print(f"  Val:  len={len(val_idx)}")
+    print(df.iloc[val_idx]['dx'].value_counts(normalize=True))
+    train_ds = HAM10000(df=train_fold, transform=transforms_train, mode=config['dataset']['mode'])
+    val_ds = HAM10000(df=val_fold, transform=transforms_val_test, mode=config['dataset']['mode'])
+    target = [int(mapping_handler[label.upper()]) for label in train_fold['dx'].values]
+    sampler = utils.generate_sampler(target)
+    # Create train and validation data loaders
+    train_dl = torch.utils.data.DataLoader(
+        train_ds,
+        batch_size=config['net_train']['batch_size'],
+        sampler=sampler,
+        pin_memory=True, num_workers=5)
+    val_dl = torch.utils.data.DataLoader(
+        val_ds,
+        batch_size=config['net_train']['batch_size'],
+        shuffle=False, pin_memory=True, num_workers=5)
+    test_ds = HAM10000(df=test_df, transform=transforms_val_test, mode=config['dataset']['mode'])
+    test_dl = torch.utils.data.DataLoader(
+        test_ds, batch_size=config['net_train']['batch_size'],
+        shuffle=False, pin_memory=True, num_workers=5)
+
+    # Create a new instance of the model for each fold
+    if config['dataset']['mode'] == 'hybrid':
+        model = DeepRadiomicsClassifier(radiomic_feature_size=len(train_ds[0]["features_names"]),
+                                        num_classes=num_classes,
+                                        backbone='efficientnet_b0')
+    elif config['dataset']['mode'] == 'radiomics':
+        model = RadiomicsClassifier(radiomic_feature_size=len(train_ds[0]["features_names"]),
+                                    num_classes=num_classes)
+    elif config['dataset']['mode'] == 'images':
+        model = ImageClassifier(num_classes=num_classes,
+                                backbone='efficientnet_b0')
+    
+    model.to(device=device)
+
+    # Create a new optimizer for each fold
+    if config['net_train']['optimizer'] == 'adam':
+        optimizer = torch.optim.Adam(model.parameters(),
+                                     lr=config['net_train']['lr'],
+                                     weight_decay=config['net_train']['wd'])
+    elif config['net_train']['optimizer'] == 'sgd':
+        optimizer = torch.optim.SGD(model.parameters(),
+                                    lr=config['net_train']['lr'],
+                                    weight_decay=config['net_train']['wd'])
+
+    # Train the model
+    net_dict = train_net(model, train_dl, val_dl, criterion, optimizer, num_classes, config, device)
+    model.load_state_dict(net_dict)
+
+    # Test the model on the test set
+    fold_result = test_net(model, test_dl, config, device)
+    fold_results.append(fold_result)
+
+# %%
+metrics_summary_macro = {
+    'precision': [],
+    'recall': [],
+    'f1-score': [],
+    }
+metrics_summary_weighted = {
+    'precision': [],
+    'recall': [],
+    'f1-score': [],
+    }
+accuracy = []
+balanced_accuracy = []
+for fold_result in fold_results:
+    for label, metrics in fold_result.items():
+        if label == 'weighted avg':
+            metrics_summary_macro['precision'].append(metrics['precision'])
+            metrics_summary_macro['recall'].append(metrics['recall'])
+            metrics_summary_macro['f1-score'].append(metrics['f1-score'])
+        elif label == 'macro avg':
+            metrics_summary_weighted['precision'].append(metrics['precision'])
+            metrics_summary_weighted['recall'].append(metrics['recall'])
+            metrics_summary_weighted['f1-score'].append(metrics['f1-score'])
+        elif label == 'accuracy':
+            accuracy.append(metrics)
+        elif label == 'balanced_accuracy':
+            balanced_accuracy.append(metrics)
+
+# Convert lists to numpy arrays for easy statistical calculations
+for metric in metrics_summary_weighted:
+    metrics_summary_weighted[metric] = np.array(metrics_summary_weighted[metric])
+for metric in metrics_summary_macro:
+    metrics_summary_macro[metric] = np.array(metrics_summary_macro[metric])
+accuracy = np.array(accuracy)
+balanced_accuracy = np.array(balanced_accuracy)
+
+# Compute mean and standard deviation for each metric
+print("\nSummary of performance metrics (weighted avg):")
+for metric, values in metrics_summary_weighted.items():
+    mean = np.mean(values)
+    std = np.std(values)
+    print(f"{metric.capitalize():9s}\tMean = {mean:.4f},\tSD = {std:.4f}")
+
+print("\nSummary of performance metrics (macro avg):")
+for metric, values in metrics_summary_macro.items():
+    mean = np.mean(values)
+    std = np.std(values)
+    print(f"{metric.capitalize():9s}\tMean = {mean:.4f},\tSD = {std:.4f}")
+
+accuracy_mean = np.mean(accuracy)
+accuracy_std = np.std(accuracy)
+print(f"\n{'Accuracy':9s}\tMean = {accuracy_mean:.4f},\tSD = {accuracy_std:.4f}")
+
+balanced_accuracy_mean = np.mean(balanced_accuracy)
+balanced_accuracy_std = np.std(balanced_accuracy)
+print(f"{'Accuracy (bal.)':9s}\tMean = {balanced_accuracy_mean:.4f},\tSD = {balanced_accuracy_std:.4f}")
 # %%
