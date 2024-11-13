@@ -9,10 +9,10 @@ from net_utils import train_net, test_net
 import logging
 import albumentations as A
 from Dataset import HAM10000, MappingHandler
-from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold  #, KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LassoCV
-from model import *
+from model import DeepRadiomicsClassifier, RadiomicsClassifier, ImageClassifier
 # TODO dodać neptune albo w&b
 
 
