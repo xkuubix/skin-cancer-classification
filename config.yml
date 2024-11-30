@@ -3,18 +3,22 @@ device: 'cuda:0'
 
 dir:
   seg:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_segmentations/'
-  img:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_images/'
+  img:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_images_no_hair/'
   csv:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_metadata'
+  seg_test:    '/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_Segmentations_trained_on_ham_no_hair/'  
+  csv_test:    '/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_GroundTruth.csv'
+  img_test:    '/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_Images_resized_no_hair/'
   pkl_train:   '/media/dysk_a/jr_buler/HAM10000/my_pickle/train_radiomic_features.pkl'
   pkl_val:     '/media/dysk_a/jr_buler/HAM10000/my_pickle/val_radiomic_features.pkl'
   pkl_test:    '/media/dysk_a/jr_buler/HAM10000/my_pickle/test_radiomic_features.pkl'
   inf:         '/media/dysk_a/jr_buler/HAM10000/my_pickle/info.txt'
 
 dataset:
+  mode: 'images' # images, radiomics, hybrid
   split_fraction_train_rest: 0.7
   split_fraction_val_test: 0.5
   img_size: 224 #384
-  k_folds: 10
+  k_folds: 5
   train_sampling:
     method: 'none' # oversample, undersample none
     multiplier: 1.0 # 0. to 1. value 1.0 means no change (applicable in undersampling scenario)
@@ -31,7 +35,7 @@ net_train:
   scheduler: 'linear' # linear, step, plateau
   #
   epochs: 1000
-  patience: 50
-  batch_size: 24
+  patience: 25
+  batch_size: 64
   lr: 0.001
   wd: 0.001
