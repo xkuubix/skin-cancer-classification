@@ -1,13 +1,8 @@
 #%%
 import cv2
-import numpy as np
 import os
-
 import matplotlib.pyplot as plt
 
-
-dir_imag = "/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_Images"
-dir_to_save = "/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_Images_no_hair"
 
 def plot_image(dir_imag, index):
     files_imag = sorted(os.listdir(dir_imag))
@@ -50,15 +45,20 @@ def hair_removal(im, to_gray=False):
 
 # %%
 # plots
-if 0:
-    for item in range(20):
-        plot_image(dir_imag, item)
+if __name__ == '__main__':
+    
+    dir_imag = "/media/dysk_a/jr_buler/HAM10000/train/HAM10000_images"
+    dir_to_save = "/media/dysk_a/jr_buler/HAM10000/train/HAM10000_images_no_hair"
 
-# saving
-i = 0
-if 1:
-    for file in sorted(os.listdir(dir_imag)):
-        save_image(dir_imag, dir_to_save, file)
-        i += 1
-print(f"Saved {i} images at {dir_to_save}")
+    if 0:
+        for item in range(20):
+            plot_image(dir_imag, item)
+
+    # saving
+    i = 0
+    if 1:
+        for file in sorted(os.listdir(dir_imag)):
+            save_image(dir_imag, dir_to_save, file)
+            i += 1
+    print(f"Saved {i} images at {dir_to_save}")
 # %%
