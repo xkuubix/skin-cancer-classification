@@ -7,6 +7,9 @@ import argparse
 import numpy as np
 import pandas as pd
 from torch.utils.data import WeightedRandomSampler
+from sklearn.linear_model import LassoCV
+from Dataset import MappingHandler
+from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
 
@@ -224,3 +227,88 @@ def generate_sampler(target):
                                     len(samples_weight),
                                     replacement=True)
     return sampler
+
+
+def prepare_data_for_fold(train_fold, val_fold, test_df, random_state, cv=5):
+
+    feature_columns = train_fold.columns[10:]
+    X_train = train_fold[feature_columns].values
+    
+    scaler = StandardScaler()
+    mapping_handler = MappingHandler().mapping
+    X_train_scaled = scaler.fit_transform(X_train)
+    y_train = [int(mapping_handler[label.upper()]) for label in train_fold['dx'].values]
+    
+    lasso = LassoCV(cv=cv, random_state=random_state, max_iter=10000, tol=0.001)
+    lasso.fit(X_train_scaled, y_train)
+    selected_features = [feature_columns[i] for i in range(len(feature_columns)) if lasso.coef_[i] != 0]
+    logger.info(f"No. of selected features: {len(selected_features)}")
+
+    scaler = StandardScaler()
+    train_fold[selected_features] = scaler.fit_transform(train_fold[selected_features].values)
+    val_fold[selected_features] = scaler.transform(val_fold[selected_features].values)
+    test_df[selected_features] = scaler.transform(test_df[selected_features].values)
+
+    # keep only the selected features and metadata columns
+    metadata_columns = train_fold.columns[:10]  # Adjust as necessary for metadata columns
+    columns_to_keep = list(metadata_columns) + selected_features
+
+    return train_fold[columns_to_keep], val_fold[columns_to_keep], test_df[columns_to_keep]
+
+
+def print_metrics(fold_results):
+    metrics_summary_macro = {
+    'precision': [],
+    'recall': [],
+    'f1-score': [],
+    }
+    metrics_summary_weighted = {
+    'precision': [],
+    'recall': [],
+    'f1-score': [],
+    }
+    accuracy = []
+    balanced_accuracy = []
+    for fold_result in fold_results:
+        for label, metrics in fold_result.items():
+            if label == 'weighted avg':
+                metrics_summary_macro['precision'].append(metrics['precision'])
+                metrics_summary_macro['recall'].append(metrics['recall'])
+                metrics_summary_macro['f1-score'].append(metrics['f1-score'])
+            elif label == 'macro avg':
+                metrics_summary_weighted['precision'].append(metrics['precision'])
+                metrics_summary_weighted['recall'].append(metrics['recall'])
+                metrics_summary_weighted['f1-score'].append(metrics['f1-score'])
+            elif label == 'accuracy':
+                accuracy.append(metrics)
+            elif label == 'balanced_accuracy':
+                balanced_accuracy.append(metrics)
+
+# Convert lists to numpy arrays for easy statistical calculations
+    for metric in metrics_summary_weighted:
+        metrics_summary_weighted[metric] = np.array(metrics_summary_weighted[metric])
+    for metric in metrics_summary_macro:
+        metrics_summary_macro[metric] = np.array(metrics_summary_macro[metric])
+    accuracy = np.array(accuracy)
+    balanced_accuracy = np.array(balanced_accuracy)
+
+# Compute mean and standard deviation for each metric
+    print("\nSummary of performance metrics (weighted avg):")
+    for metric, values in metrics_summary_weighted.items():
+        mean = np.mean(values)
+        std = np.std(values)
+        print(f"{metric.capitalize():9s}\tMean = {mean:.4f},\tSD = {std:.4f}")
+
+    print("\nSummary of performance metrics (macro avg):")
+    for metric, values in metrics_summary_macro.items():
+        mean = np.mean(values)
+        std = np.std(values)
+        print(f"{metric.capitalize():9s}\tMean = {mean:.4f},\tSD = {std:.4f}")
+
+    accuracy_mean = np.mean(accuracy)
+    accuracy_std = np.std(accuracy)
+    print(f"\n{'Accuracy':9s}\tMean = {accuracy_mean:.4f},\tSD = {accuracy_std:.4f}")
+
+    balanced_accuracy_mean = np.mean(balanced_accuracy)
+    balanced_accuracy_std = np.std(balanced_accuracy)
+    print(f"{'Accuracy (bal.)':9s}\tMean = {balanced_accuracy_mean:.4f},\tSD = {balanced_accuracy_std:.4f}")
