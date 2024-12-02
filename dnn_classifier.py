@@ -88,15 +88,15 @@ kf = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
 # Concatenate train and validation set for k-fold cross validation
 df = pd.concat([train_df, val_df], ignore_index=True)
 kf.get_n_splits(df)
-for i, (train_idx, val_idx) in enumerate(kf.split(df, df['dx'])):
-    train_fold = df.iloc[train_idx]
-    val_fold = df.iloc[val_idx]
+for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])):
+    train_fold = df.iloc[train_indices]
+    val_fold = df.iloc[val_indices]
     print('--------------------------------')
-    print(f"Fold {i}:")
-    print(f"  Train: len={len(train_idx)}")
-    print(df.iloc[train_idx]['dx'].value_counts(normalize=True))        
-    print(f"  Val:  len={len(val_idx)}")
-    print(df.iloc[val_idx]['dx'].value_counts(normalize=True))
+    print(f"Fold {fold_index}:")
+    print(f"  Train: len={len(train_indices)}")
+    print(f"  Train class distribution: {df.iloc[train_indices]['dx'].value_counts(normalize=True)}")
+    print(f"  Val:  len={len(val_indices)}")
+    print(f"  Validation class distribution: {df.iloc[val_indices]['dx'].value_counts(normalize=True)}")
     # Prepare data for the fold (copy df cuz it is in the loop)
     train_fold, val_fold, test_fold = utils.prepare_data_for_fold(
         train_fold, val_fold, test_df.copy(), random_state=seed)
@@ -107,18 +107,19 @@ for i, (train_idx, val_idx) in enumerate(kf.split(df, df['dx'])):
     test_ds = HAM10000(df=test_fold, transform=transforms_val_test, mode=config['dataset']['mode'])
     
     mapping_handler = MappingHandler().mapping
+    labels = [int(mapping_handler[label.upper()]) for label in train_fold['dx'].values]
     train_dl = torch.utils.data.DataLoader(
         train_ds, batch_size=config['net_train']['batch_size'],
-        sampler=utils.generate_sampler([int(mapping_handler[label.upper()]) for label in train_fold['dx'].values]),
-        pin_memory=True, num_workers=5)
+        sampler=utils.generate_sampler(labels),
+        pin_memory=True, num_workers=config['net_train']['num_workers'])
     
     val_dl = torch.utils.data.DataLoader(
         val_ds, batch_size=config['net_train']['batch_size'],
-        shuffle=False, pin_memory=True, num_workers=5)
+        shuffle=False, pin_memory=True, num_workers=config['net_train']['num_workers'])
 
     test_dl = torch.utils.data.DataLoader(
         test_ds, batch_size=config['net_train']['batch_size'],
-        shuffle=False, pin_memory=True, num_workers=5)
+        shuffle=False, pin_memory=True, num_workers=config['net_train']['num_workers'])
     
     # new instance of the model for each fold
     if config['dataset']['mode'] == 'hybrid':
