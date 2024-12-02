@@ -5,8 +5,6 @@ import numpy as np
 from PIL import Image
 from collections import Counter
 from torch.utils.data import Dataset
-from utils import pretty_dict_str
-
 logger = logging.getLogger(__name__)
 
 
@@ -132,3 +130,21 @@ class MappingHandler:
 
         else:
             raise ValueError("Invalid key or value")
+        
+def pretty_dict_str(d, key_only=False):
+    #take empty string
+    sorted_list = sorted(d.items())
+    sorted_dict = {}
+    for key, value in sorted_list:
+        sorted_dict[key] = value
+    pretty_dict = ''  
+     
+    #get items for dict
+    if key_only:
+        for k, _ in sorted_dict.items():
+            pretty_dict += f'\n\t{k}'
+    else:
+        for k, v in sorted_dict.items():
+            pretty_dict += f'\n\t{k}:\t{v}'
+        #return result
+    return pretty_dict
