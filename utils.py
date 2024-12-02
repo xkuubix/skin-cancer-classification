@@ -249,9 +249,7 @@ def prepare_data_for_fold(train_fold, val_fold, test_df, random_state, cv=5):
     val_fold[selected_features] = scaler.transform(val_fold[selected_features].values)
     test_df[selected_features] = scaler.transform(test_df[selected_features].values)
 
-    # keep only the selected features and metadata columns
-    metadata_columns = train_fold.columns[:10]  # Adjust as necessary for metadata columns
-    columns_to_keep = list(metadata_columns) + selected_features
+    columns_to_keep = list(feature_columns) + selected_features
 
     return train_fold[columns_to_keep], val_fold[columns_to_keep], test_df[columns_to_keep]
 
