@@ -8,7 +8,7 @@ import logging
 from multiprocessing import Pool
 from radiomics import featureextractor
 from utils import pretty_dict_str
-
+import albumentations as A
 logger = logging.getLogger(__name__)
 
 
@@ -66,9 +66,14 @@ class RadiomicsExtractor():
             im = self._hair_removal(im)
         else:
             pass
-
         if self.transforms:
-            transformed = self.transforms(image=im, mask=sg)
+            if im.shape != sg.shape:
+                for tf in self.transforms:
+                    logger.warning("Image and segmentation shape mismatch. Applying transform to segmentation.")
+                    if isinstance(tf, A.Resize):
+                        sg = tf(image=sg)
+                        sg = sg['image']
+            transformed = self.transforms(image=np.array(im), mask=np.array(sg))
             im = transformed['image']
             if len(sg.shape) != 2:
                 sg = sitk.GetImageFromArray(transformed['mask'][:,:,0])
