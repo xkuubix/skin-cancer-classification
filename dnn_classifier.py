@@ -65,12 +65,6 @@ with open(config['dir']['pkl_val'], 'rb') as handle:
 with open(config['dir']['pkl_test'], 'rb') as handle:
     test_df = pickle.load(handle)
     logger.info(f"Loaded radiomics features (test) from {config['dir']['pkl_test']}")
-
-#######################
-train_df['img_path'] = train_df['img_path'].str.replace('HAM10000_images', 'HAM10000_images_no_hair', regex=False)
-val_df['img_path'] = val_df['img_path'].str.replace('HAM10000_images', 'HAM10000_images_no_hair', regex=False)
-test_df['img_path'] = test_df['img_path'].str.replace('ISIC2018_Task3_Test_Images_resized', 'ISIC2018_Task3_Test_Images_resized_no_hair', regex=False)
-#######################
 # %%
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Device: {device}")
