@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 from collections import Counter
 from torch.utils.data import Dataset
+import albumentations as A
 logger = logging.getLogger(__name__)
 
 
@@ -54,6 +55,10 @@ class HAM10000(Dataset):
             mask = np.array(mask)
 
             if self._transform:
+                for tft in self._transform:
+                    if isinstance(tft, A.Resize):
+                        image = tft(image=image)['image']
+                        mask = tft(image=mask)['image']
                 transformed = self._transform(image=image, mask=mask)
                 image = transformed['image']
                 mask = transformed['mask']
