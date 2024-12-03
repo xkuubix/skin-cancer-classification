@@ -3,6 +3,7 @@ import numpy as np
 import SimpleITK as sitk
 import multiprocessing
 import time
+import os
 from tqdm import tqdm, trange
 import logging
 from multiprocessing import Pool
@@ -51,29 +52,46 @@ class RadiomicsExtractor():
         return list(self.extractor.enabledFeatures.keys())
 
     def extract_radiomics(self, d:dict):
+        gray_features, rgb_features = True, True
+        label = self.extractor.settings.get('label', None)
+
         img_path = d['img_path']
         seg_path = d['seg_path']
-        gray_features = 1
-        rgb_features = 1
-        label = self.extractor.settings.get('label', None)
         
-        im = cv2.imread(img_path)
-        sg = cv2.imread(seg_path)
-        im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+        if not os.path.exists(img_path):
+            raise FileNotFoundError(f"Image file not found: {img_path}")
+        elif not os.path.exists(seg_path):
+            raise FileNotFoundError(f"Segmentation file not found: {seg_path}")
+        
+        im = sitk.ReadImage(img_path)
+        im = sitk.GetArrayFromImage(im)
+        
+        sg = sitk.ReadImage(seg_path)
+        sg = sitk.GetArrayFromImage(sg)
+        
+        if len(sg.shape) == 3:
+            sg = sg[:,:,0]
+        if len(sg.shape) == 2:
+            sg = np.expand_dims(sg, axis=2)
 
+        if im is None:
+            raise ValueError(f"Image loading failed. Check the file path: {img_path}")
+        elif sg is None:
+            raise ValueError(f"Segmentation loading failed. Check the file path: {seg_path}")
 
         if self.remove_hair:
             im = self._hair_removal(im)
         else:
             pass
         if self.transforms:
-            if im.shape != sg.shape:
+            # print(im.shape, sg.shape)
+            # print(im.shape[0:2], sg.shape[0:2])
+            if im.shape[0:2] != sg.shape[0:2]:
                 for tf in self.transforms:
-                    logger.warning("Image and segmentation shape mismatch. Applying transform to segmentation.")
                     if isinstance(tf, A.Resize):
-                        sg = tf(image=sg)
-                        sg = sg['image']
-            transformed = self.transforms(image=np.array(im), mask=np.array(sg))
+                        im = tf(image=im)['image']
+                        sg = tf(image=sg)['image']
+            transformed = self.transforms(image=im, mask=sg)
             im = transformed['image']
             if len(sg.shape) != 2:
                 sg = sitk.GetImageFromArray(transformed['mask'][:,:,0])
