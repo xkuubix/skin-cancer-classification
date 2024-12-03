@@ -4,19 +4,19 @@ device: 'cuda:0'
 dir:
   seg:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_segmentations/'
   img:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_images_no_hair/'
-  csv:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_metadata'
-  seg_test:    '/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_Segmentations_trained_on_ham_no_hair/'  
-  csv_test:    '/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_GroundTruth.csv'
+  seg_test:    '/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_Images_Segmentations_trained_on_HAM_no_hair/'  
   img_test:    '/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_Images_resized_no_hair/'
+  csv:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_metadata'
+  csv_test:    '/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_GroundTruth.csv'
   pkl_train:   '/media/dysk_a/jr_buler/HAM10000/my_pickle/train_radiomic_features.pkl'
   pkl_val:     '/media/dysk_a/jr_buler/HAM10000/my_pickle/val_radiomic_features.pkl'
   pkl_test:    '/media/dysk_a/jr_buler/HAM10000/my_pickle/test_radiomic_features.pkl'
   inf:         '/media/dysk_a/jr_buler/HAM10000/my_pickle/info.txt'
 
 dataset:
-  mode: 'images' # images, radiomics, hybrid
-  split_fraction_train_rest: 0.7
-  split_fraction_val_test: 0.5
+  mode: 'hybrid' # images, radiomics, hybrid
+  split_fraction_train_rest: 0.7 # not used in k-folds
+  split_fraction_val_test: 0.5   # not used in k-folds
   img_size: 224 #384
   k_folds: 5
   train_sampling:
@@ -36,6 +36,7 @@ net_train:
   #
   epochs: 1000
   patience: 25
-  batch_size: 64
+  batch_size: 32
+  num_workers: 5
   lr: 0.001
   wd: 0.001
