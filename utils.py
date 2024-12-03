@@ -242,7 +242,7 @@ def prepare_data_for_fold(train_fold, val_fold, test_df, random_state, cv=5):
     lasso = LassoCV(cv=cv, random_state=random_state, max_iter=10000, tol=0.001)
     lasso.fit(X_train_scaled, y_train)
     selected_features = [feature_columns[i] for i in range(len(feature_columns)) if lasso.coef_[i] != 0]
-    logger.info(f"No. of selected features: {len(selected_features)}")
+    print(f"No. of selected features: {len(selected_features)}")
 
     scaler = StandardScaler()
     train_fold[selected_features] = scaler.fit_transform(train_fold[selected_features].values)
