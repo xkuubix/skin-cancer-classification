@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def group_df(df: pd.DataFrame):
     # df = df.sort_values(by=['image_id'])
-    old_len = len(df)
+    previous_len = len(df)
     df = df.groupby('lesion_id')
     df = df.agg({
                     "image_id": list,
@@ -29,12 +29,12 @@ def group_df(df: pd.DataFrame):
                     "dataset": list
                     })
     logger.info("Grouped same ID (lesion_id) dataframe cells, " +\
-                f"old length = {old_len} => new length = {str(len(df))}")
+                f"previous length = {previous_len} => new length = {str(len(df))}")
     return df.reset_index()
 
 
 def ungroup_df(df: pd.DataFrame):
-    old_len = len(df)
+    previous_length = len(df)
     new_df = pd.concat([pd.DataFrame({
         'lesion_id': [row['lesion_id']] * len(row['image_id']),
         'image_id': row['image_id'],
@@ -49,7 +49,7 @@ def ungroup_df(df: pd.DataFrame):
     }) for _, row in df.iterrows()], ignore_index=True)
 
     logger.info("Ungrouped dataframe cells by lesion_id, " +\
-                f"old length = {old_len} => new length = {str(len(new_df))}")
+                f"previous length = {previous_length} => new length = {str(len(new_df))}")
     return new_df
 
 def insert_paths_df(df: pd.DataFrame,
