@@ -271,11 +271,11 @@ def print_metrics(fold_results):
     balanced_accuracy = []
     for fold_result in fold_results:
         for label, metrics in fold_result.items():
-            if label == 'weighted avg':
+            if label == 'macro avg':
                 metrics_summary_macro['precision'].append(metrics['precision'])
                 metrics_summary_macro['recall'].append(metrics['recall'])
                 metrics_summary_macro['f1-score'].append(metrics['f1-score'])
-            elif label == 'macro avg':
+            elif label == 'weighted avg':
                 metrics_summary_weighted['precision'].append(metrics['precision'])
                 metrics_summary_weighted['recall'].append(metrics['recall'])
                 metrics_summary_weighted['f1-score'].append(metrics['f1-score'])
