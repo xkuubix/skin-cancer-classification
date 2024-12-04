@@ -66,7 +66,7 @@ with open(config['dir']['pkl_test'], 'rb') as handle:
     test_df = pickle.load(handle)
     logger.info(f"Loaded radiomics features (test) from {config['dir']['pkl_test']}")
 # %%
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = config['device'] if torch.cuda.is_available() else 'cpu'
 print(f"Device: {device}")
 
 num_classes = 1 if config['net_train']['criterion'] == 'bce' else len(train_df['dx'].unique())
@@ -91,11 +91,15 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     print(f"  Train class distribution: {df.iloc[train_indices]['dx'].value_counts(normalize=True)}")
     print(f"  Val:  len={len(val_indices)}")
     print(f"  Validation class distribution: {df.iloc[val_indices]['dx'].value_counts(normalize=True)}")
-    # Prepare data for the fold (copy df cuz it is in the loop)
+    # feature selecct + normalization (copy df cuz it is in the loop)
     train_fold, val_fold, test_fold = utils.prepare_data_for_fold(
-        train_fold, val_fold, test_df.copy(), random_state=seed)
+        train_fold.copy(), val_fold.copy(), test_df.copy(), random_state=seed)
 
-    # Create datasets and dataloaders
+    print(f"Training mean (column 11): {train_fold.iloc[:, 10].mean()}")
+    print(f"Validation mean (column 11): {val_fold.iloc[:, 10].mean()}")
+    print(f"Test mean (column 11): {test_fold.iloc[:, 10].mean()}")
+
+    # datasets & dataloaders
     train_ds = HAM10000(df=train_fold, transform=transforms_train, mode=config['dataset']['mode'])
     val_ds = HAM10000(df=val_fold, transform=transforms_val_test, mode=config['dataset']['mode'])
     test_ds = HAM10000(df=test_fold, transform=transforms_val_test, mode=config['dataset']['mode'])
