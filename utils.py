@@ -293,22 +293,23 @@ def print_metrics(fold_results):
     balanced_accuracy = np.array(balanced_accuracy)
 
 # Compute mean and standard deviation for each metric
+    digits = 6
     print("\nSummary of performance metrics (weighted avg):")
     for metric, values in metrics_summary_weighted.items():
         mean = np.mean(values)
         std = np.std(values)
-        print(f"{metric.capitalize():9s}\tMean = {mean:.4f},\tSD = {std:.4f}")
+        print(f"{metric.capitalize():9s}\tMean = {mean:.{digits}f},\tSD = {std:.{digits}f}")
 
     print("\nSummary of performance metrics (macro avg):")
     for metric, values in metrics_summary_macro.items():
         mean = np.mean(values)
         std = np.std(values)
-        print(f"{metric.capitalize():9s}\tMean = {mean:.4f},\tSD = {std:.4f}")
+        print(f"{metric.capitalize():9s}\tMean = {mean:.{digits}f},\tSD = {std:.{digits}f}")
 
     accuracy_mean = np.mean(accuracy)
     accuracy_std = np.std(accuracy)
-    print(f"\n{'Accuracy':9s}\tMean = {accuracy_mean:.4f},\tSD = {accuracy_std:.4f}")
+    print(f"\n{'Accuracy':9s}\tMean = {accuracy_mean:.{digits}f},\tSD = {accuracy_std:.{digits}f}")
 
     balanced_accuracy_mean = np.mean(balanced_accuracy)
     balanced_accuracy_std = np.std(balanced_accuracy)
-    print(f"{'Accuracy (bal.)':9s}\tMean = {balanced_accuracy_mean:.4f},\tSD = {balanced_accuracy_std:.4f}")
+    print(f"{'Accuracy (bal.)':9s}\tMean = {balanced_accuracy_mean:.{digits}f},\tSD = {balanced_accuracy_std:.{digits}f}")
