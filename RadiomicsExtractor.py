@@ -69,6 +69,8 @@ class RadiomicsExtractor():
         sg = sitk.ReadImage(seg_path)
         sg = sitk.GetArrayFromImage(sg)
         
+
+
         if len(sg.shape) == 3:
             sg = sg[:,:,0]
         if len(sg.shape) == 2:
@@ -85,7 +87,6 @@ class RadiomicsExtractor():
             pass
         if self.transforms:
             # print(im.shape, sg.shape)
-            # print(im.shape[0:2], sg.shape[0:2])
             if im.shape[0:2] != sg.shape[0:2]:
                 for tf in self.transforms:
                     if isinstance(tf, A.Resize):
@@ -93,25 +94,30 @@ class RadiomicsExtractor():
                         sg = tf(image=sg)['image']
             transformed = self.transforms(image=im, mask=sg)
             im = transformed['image']
-            if len(sg.shape) != 2:
-                sg = sitk.GetImageFromArray(transformed['mask'][:,:,0])
-            else:
-                sg = sitk.GetImageFromArray(transformed['mask'])
-        else:
-            if len(sg.shape) != 2:
-                sg = sitk.GetImageFromArray(sg[:,:,0])
-            else:
-                sg = sitk.GetImageFromArray(sg)
+            sg = transformed['mask']
+            sg = sitk.GetImageFromArray(sg)
 
-        
+        # if len(sg.shape) == 3:
+        #     sg = sitk.GetImageFromArray(transformed['mask'][:,:,0])
+        # else:
+        #     sg = sitk.GetImageFromArray(transformed['mask'])
+        # else:
+        #     if len(sg.shape) != 2:
+        #         sg = sitk.GetImageFromArray(sg[:,:,0])
+        #     else:
+        #         sg = sitk.GetImageFromArray(sg)
+
         if gray_features:
             im_gray = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
+            im_gray = np.expand_dims(im_gray, axis=2)
             im_gray = sitk.GetImageFromArray(im_gray)
             features = self.extractor.execute(im_gray, sg, label=label)
             features_gray = features
-
         if rgb_features:
             r, g, b = cv2.split(im)
+            r = np.expand_dims(r, axis=2)
+            g = np.expand_dims(g, axis=2)
+            b = np.expand_dims(b, axis=2)
             r = sitk.GetImageFromArray(r)
             g = sitk.GetImageFromArray(g)
             b = sitk.GetImageFromArray(b)
