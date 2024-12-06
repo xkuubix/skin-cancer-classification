@@ -68,6 +68,9 @@ with open(config['dir']['pkl_test'], 'rb') as handle:
 # %%
 device = config['device'] if torch.cuda.is_available() else 'cpu'
 print(f"Device: {device}")
+print(f"Mode: {config['dataset']['mode']}")
+if config['dataset']['mode'] in ['hybrid', 'images']:
+    print(f"Backbone: {config['net_train']['backbone']}")
 
 num_classes = 1 if config['net_train']['criterion'] == 'bce' else len(train_df['dx'].unique())
 if config['net_train']['criterion'] == 'bce':
