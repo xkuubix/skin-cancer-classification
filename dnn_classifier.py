@@ -123,13 +123,13 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     if config['dataset']['mode'] == 'hybrid':
         model = DeepRadiomicsClassifier(radiomic_feature_size=len(train_ds[0]["features_names"]),
                                         num_classes=num_classes,
-                                        backbone='resnet34')
+                                        backbone=config['net_train']['backbone'])
     elif config['dataset']['mode'] == 'radiomics':
         model = RadiomicsClassifier(radiomic_feature_size=len(train_ds[0]["features_names"]),
                                     num_classes=num_classes)
     elif config['dataset']['mode'] == 'images':
         model = ImageClassifier(num_classes=num_classes,
-                                backbone='resnet34')
+                                backbone=config['net_train']['backbone'])
     model.to(device=device)
 
     # new optimizer for each fold

@@ -29,7 +29,7 @@ radiomics:
   save: False # True, False
 
 net_train:
-  # TODO
+  backbone: 'efficientnet_b0' # resnet34, efficientnet_b0
   optimizer: 'sgd' # adam, sgd
   criterion: 'ce' # bce, ce
   scheduler: 'linear' # linear, step, plateau
