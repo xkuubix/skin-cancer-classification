@@ -39,6 +39,7 @@ class RadiomicsClassifier(nn.Module):
     def __init__(self, radiomic_feature_size=None, num_classes=None):
             super(RadiomicsClassifier, self).__init__()
             self.radiomic_norm = nn.BatchNorm1d(radiomic_feature_size)
+            # self.radiomic_norm = nn.LayerNorm(radiomic_feature_size)
             self.radiomic_fc = nn.Sequential(
                 nn.Linear(radiomic_feature_size, 512),
                 nn.ReLU(),
@@ -50,7 +51,7 @@ class RadiomicsClassifier(nn.Module):
             self.classifier = nn.Linear(128, num_classes)
 
     def forward(self, radiomic_features):
-        # radiomic_features = self.radiomic_norm(radiomic_features)
+        radiomic_features = self.radiomic_norm(radiomic_features)
         radiomic_features = self.radiomic_fc(radiomic_features)
         output = self.classifier(self.dropout(radiomic_features))
         return output
