@@ -155,6 +155,12 @@ if config['radiomics']['extract']:
             file.write('\n'.join(feature_types))
             file.write('\n\nTransforms:\n' + str(transforms_train))
             file.write('\n\nHair removal: ' + str(extractor_train.remove_hair))
+            file.write('\n\nData train img:' + str(config['dir']['img']))
+            file.write('\n\nData train seg:' + str(config['dir']['seg']))
+            file.write('\n\nData test img:' + str(config['dir']['img_test']))
+            file.write('\n\nData test seg:' + str(config['dir']['seg_test']))
+            file.write('\n\nNumber of Radiomic features:' + str(len(train_df.columns[10:])))
+            file.write('\n')
         logger.info(f"Saved extraction details in {config['dir']['inf']}")
 # %% Logging in constructor
 train_ds = HAM10000(df=train_df, mode='radiomics')
