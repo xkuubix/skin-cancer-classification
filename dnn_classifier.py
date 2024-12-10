@@ -83,6 +83,8 @@ if config['neptune']:
     run = neptune.init_run(project='ProjektMMG/skin-lesions')
     run['parameters'] = config
     run['no radiomic features'] = len(test_df.columns[10:])
+else:
+    run = None
 
 # %% ---------------------K-Fold Cross Validation---------------------
 fold_results = []
