@@ -34,6 +34,8 @@ class RadiomicsExtractor():
 
     def  __init__(self, param_file: str, transforms=None, remove_hair=True,
                   rgb_features=True, gray_features=True):
+        self.rgb_features = rgb_features
+        self.gray_features = gray_features
         self.extractor = featureextractor.RadiomicsFeatureExtractor(param_file)
         msg = "\n\nEnabled Image Types:"
         msg += pretty_dict_str(self.extractor.enabledImagetypes, key_only=True)
@@ -53,7 +55,7 @@ class RadiomicsExtractor():
         return list(self.extractor.enabledFeatures.keys())
 
     def extract_radiomics(self, d:dict):
-        gray_features, rgb_features = True, True
+        gray_features, rgb_features = self.gray_features, self.rgb_features
         label = self.extractor.settings.get('label', None)
 
         img_path = d['img_path']
