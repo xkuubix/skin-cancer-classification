@@ -1,6 +1,6 @@
 import time
 import torch
-from sklearn.metrics import classification_report, confusion_matrix, recall_score, balanced_accuracy_score
+from sklearn.metrics import classification_report, confusion_matrix, balanced_accuracy_score
 
 
 def one_hot(x, length):
@@ -13,7 +13,6 @@ def one_hot(x, length):
 def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, device):
     net.to(device)
     best_val_loss = float('inf')
-    best_val_metric = 0.
     best_model = None
     patience = config['net_train']['patience']
     early_stop_counter = 0
