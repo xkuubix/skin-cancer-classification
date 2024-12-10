@@ -44,13 +44,6 @@ fraction = config['dataset']['split_fraction_train_rest']
 
 # Perform the split
 train_df, val_df = train_test_split(df, test_size=1-fraction, random_state=seed)
-
-
-
-# train_df, val_df,  = utils.random_split_df(df,
-                                                #   config['dataset']['split_fraction_train_rest'],
-                                                #   config['dataset']['split_fraction_val_test'],
-                                                #   seed=seed)
 # %%
 train_df = utils.ungroup_df(train_df)
 val_df = utils.ungroup_df(val_df)
