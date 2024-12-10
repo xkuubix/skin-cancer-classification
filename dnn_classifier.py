@@ -164,4 +164,6 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     fold_results.append(fold_result)
 
 utils.print_metrics(fold_results, run)
-run.stop()
+
+if config['neptune']:
+    run.stop()
