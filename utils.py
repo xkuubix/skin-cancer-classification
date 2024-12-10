@@ -269,6 +269,7 @@ def print_metrics(fold_results, run=None):
     }
     accuracy = []
     balanced_accuracy = []
+    micro_roc_auc = []
     class_metrics = {}
 
     for fold_result in fold_results:
@@ -285,6 +286,8 @@ def print_metrics(fold_results, run=None):
                 accuracy.append(metrics)
             elif label == 'balanced_accuracy':
                 balanced_accuracy.append(metrics)
+            elif label == 'roc_auc_micro':
+                micro_roc_auc.append(metrics)
             else:
                 if label not in class_metrics:
                     class_metrics[label] = {'precision': [], 'recall': [], 'f1-score': []}
@@ -306,8 +309,8 @@ def print_metrics(fold_results, run=None):
         std = np.std(values)
         print(f"{metric.capitalize():9s}\tMean = {mean:.{digits}f},\tSD = {std:.{digits}f}")
         if run:
-            run[f"metrics/weighted/{metric}/mean"].append(mean)
-            run[f"metrics/weighted/{metric}/std"].append(std)
+            run[f"metrics/weighted/{metric}/mean"].assign(mean)
+            run[f"metrics/weighted/{metric}/std"].assign(std)
 
     print("\nSummary of performance metrics (macro avg):")
     for metric, values in metrics_summary_macro.items():
@@ -315,8 +318,8 @@ def print_metrics(fold_results, run=None):
         std = np.std(values)
         print(f"{metric.capitalize():9s}\tMean = {mean:.{digits}f},\tSD = {std:.{digits}f}")
         if run:
-            run[f"metrics/macro/{metric}/mean"].append(mean)
-            run[f"metrics/macro/{metric}/std"].append(std)
+            run[f"metrics/macro/{metric}/mean"].assign(mean)
+            run[f"metrics/macro/{metric}/std"].assign(std)
     print("\nClass-wise performance metrics:")
     for class_label, metrics in class_metrics.items():
         print(f"\nClass: {class_label}")
@@ -326,17 +329,23 @@ def print_metrics(fold_results, run=None):
             std = np.std(values)
             print(f"{metric.capitalize():9s}\tMean = {mean:.{digits}f},\tSD = {std:.{digits}f}")
             if run:
-                run[f"class_metrics/{class_label}/{metric}/mean"].append(mean)
-                run[f"class_metrics/{class_label}/{metric}/std"].append(std)
+                run[f"class_metrics/{class_label}/{metric}/mean"].assign(mean)
+                run[f"class_metrics/{class_label}/{metric}/std"].assign(std)
     accuracy_mean = np.mean(accuracy)
     accuracy_std = np.std(accuracy)
     print(f"\n{'Accuracy':9s}\tMean = {accuracy_mean:.{digits}f},\tSD = {accuracy_std:.{digits}f}")
     if run:
-        run[f"metrics/micro/mean"].append(accuracy_mean)
-        run[f"metrics/micro/std"].append(accuracy_std)
+        run[f"metrics/micro/accuracy/mean"].assign(accuracy_mean)
+        run[f"metrics/micro/accuracy/std"].assign(accuracy_std)
     balanced_accuracy_mean = np.mean(balanced_accuracy)
     balanced_accuracy_std = np.std(balanced_accuracy)
-    if run:
-        run[f"metrics/balanced_acc/mean"].append(balanced_accuracy_mean)
-        run[f"metrics/balanced_acc/std"].append(balanced_accuracy_std)
     print(f"{'Accuracy (bal.)':9s}\tMean = {balanced_accuracy_mean:.{digits}f},\tSD = {balanced_accuracy_std:.{digits}f}")
+    if run:
+        run[f"metrics/balanced_acc/mean"].assign(balanced_accuracy_mean)
+        run[f"metrics/balanced_acc/std"].assign(balanced_accuracy_std)
+    roc_mean = np.mean(micro_roc_auc)
+    roc_std = np.std(micro_roc_auc)
+    print(f"{'ROC AUC (micro)':9s}\tMean = {roc_mean:.{digits}f},\tSD = {roc_std:.{digits}f}")
+    if run:
+        run[f"metrics/micro/roc_auc/mean"].assign(roc_mean)
+        run[f"metrics/micro/roc_auc/std"].assign(roc_std)

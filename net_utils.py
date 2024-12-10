@@ -1,6 +1,6 @@
 import time
 import torch
-from sklearn.metrics import classification_report, confusion_matrix, balanced_accuracy_score
+from sklearn.metrics import classification_report, confusion_matrix, balanced_accuracy_score, roc_auc_score
 
 def one_hot(x, length):
     batch_size = x.size(0)
@@ -120,6 +120,7 @@ def test_net(net, test_dl, config, device, mapping_handler, run=None, fold_index
     total = 0
     predicted_targets = []
     true_targets = []
+    probabilities = []
     with torch.no_grad():
         for data in test_dl:
             if config['dataset']['mode'] in ['images', 'hybrid']:  
@@ -139,13 +140,17 @@ def test_net(net, test_dl, config, device, mapping_handler, run=None, fold_index
 
             if config['net_train']['criterion'] == 'bce':
                 predicted = torch.round(torch.sigmoid(outputs.reshape(-1)))
+                probs = torch.sigmoid(outputs).reshape(-1)
             elif config['net_train']['criterion'] == 'ce':
                 _, predicted = torch.max(outputs.data, 1)
+                probs = torch.softmax(outputs, dim=1).cpu().numpy()
+            probabilities.extend(probs)
             predicted = predicted.to(device)
             total += target_idx.size(0)
             correct += (predicted == target_idx).sum().item()
             predicted_targets.extend(predicted.tolist())
             true_targets.extend(target_idx.tolist())
+            # probabilities.append(outputs.tolist())
     accuracy = correct / total
     balanced_accuracy = balanced_accuracy_score(true_targets, predicted_targets)
     print(f"Accuracy: {accuracy}")
@@ -156,10 +161,27 @@ def test_net(net, test_dl, config, device, mapping_handler, run=None, fold_index
     
     print('Finished Testing')
     report = classification_report(true_targets, predicted_targets, output_dict=True, target_names=mapping_handler.keys())
+    # print("TO DO: ROC AUC for single and multiclass")
+
+    roc_all = roc_auc_score(true_targets, probabilities,
+                            multi_class='ovr', average=None)
+    
+    roc_micro = roc_auc_score(true_targets, probabilities,
+                              multi_class='ovr', average="micro")
+    for item in range(len(mapping_handler.keys())):
+        label = list(mapping_handler.keys())[item]
+        report[label]['roc_auc'] = roc_all[item]
+
+    report['weighted avg']["roc_auc"] = roc_auc_score(true_targets, probabilities,
+                                                      multi_class='ovr', average="weighted")
+    report['macro avg']['roc_auc'] = roc_auc_score(true_targets, probabilities,
+                                                   multi_class='ovr', average="macro")
+    report['roc_auc_micro'] = roc_micro
     report['balanced_accuracy'] = balanced_accuracy
+    
 
     if run:
-        run[f"FOLD-{fold_index}/test/report"].log(report)
+        run[f"FOLD-{fold_index}/test/report"].assign(report)
 
     return report
 # %%
