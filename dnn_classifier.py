@@ -12,6 +12,7 @@ from Dataset import HAM10000, MappingHandler
 from sklearn.model_selection import StratifiedKFold  #, KFold
 from model import DeepRadiomicsClassifier, RadiomicsClassifier, ImageClassifier
 # TODO dodać neptune albo w&b
+import neptune
 
 
 logger = logging.getLogger(__name__)
@@ -77,6 +78,12 @@ if config['net_train']['criterion'] == 'bce':
     criterion = torch.nn.BCELoss()
 elif config['net_train']['criterion'] == 'ce':
     criterion = torch.nn.CrossEntropyLoss()
+
+if config['neptune']:
+    run = neptune.init_run(project='ProjektMMG/skin-lesions')
+    run['parameters'] = config
+    run['no radiomic features'] = len(test_df.columns[10:])
+
 # %% ---------------------K-Fold Cross Validation---------------------
 fold_results = []
 k = config['dataset']['k_folds']
@@ -146,10 +153,13 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
                                     weight_decay=config['net_train']['wd'])
 
     # Train
-    net_dict = train_net(model, train_dl, val_dl, criterion, optimizer, num_classes, config, device)
+    net_dict = train_net(model, train_dl, val_dl,
+                         criterion, optimizer,
+                         config, device, run, fold_index)
     model.load_state_dict(net_dict)
     # Test
-    fold_result = test_net(model, test_dl, config, device)
+    fold_result = test_net(model, test_dl, config, device, mapping_handler, run, fold_index)
     fold_results.append(fold_result)
 
-utils.print_metrics(fold_results)
+utils.print_metrics(fold_results, run)
+run.stop()

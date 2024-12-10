@@ -2,7 +2,6 @@ import time
 import torch
 from sklearn.metrics import classification_report, confusion_matrix, balanced_accuracy_score
 
-
 def one_hot(x, length):
     batch_size = x.size(0)
     x_one_hot = torch.zeros(batch_size, length, dtype=torch.float)
@@ -10,7 +9,7 @@ def one_hot(x, length):
         x_one_hot[i, x[i]] = torch.tensor(1.0, dtype=torch.float)
     return x_one_hot
 
-def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, device):
+def train_net(net, train_dl, val_dl, criterion, optimizer, config, device, run=None, fold_index=None):
     net.to(device)
     best_val_loss = float('inf')
     best_model = None
@@ -88,7 +87,11 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, de
         avg_val_loss = running_val_loss / len(val_dl)
         train_accuracy = correct / total
         val_accuracy = val_correct / val_total
-
+        if run:
+            run[f"FOLD-{fold_index}/training/accuracy"].append(train_accuracy)
+            run[f"FOLD-{fold_index}/validation/accuracy"].append(val_accuracy)
+            run[f"FOLD-{fold_index}/training/loss"].append(avg_train_loss)
+            run[f"FOLD-{fold_index}/validation/loss"].append(avg_val_loss)
         end_time = time.time()
         total_time = end_time - start_time
         print(f"Epoch {epoch+1 :3}/{config['net_train']['epochs']}, train-loss: {avg_train_loss:.3f}, val-loss: {avg_val_loss:.3f}, train-acc: {train_accuracy:.3f}, val-acc: {val_accuracy:.3f}", end=' ')
@@ -111,7 +114,7 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, n_classes, config, de
     print('Finished Training')
     return best_model
 
-def test_net(net, test_dl, config, device):
+def test_net(net, test_dl, config, device, mapping_handler, run=None, fold_index=None):
     net.eval()
     correct = 0
     total = 0
@@ -147,11 +150,16 @@ def test_net(net, test_dl, config, device):
     balanced_accuracy = balanced_accuracy_score(true_targets, predicted_targets)
     print(f"Accuracy: {accuracy}")
     print('Classification Report:')
-    print(classification_report(true_targets, predicted_targets))
+    print(classification_report(true_targets, predicted_targets, target_names=mapping_handler.keys()))
     print('Confusion Matrix:')
     print(confusion_matrix(true_targets, predicted_targets))
     
     print('Finished Testing')
-    report = classification_report(true_targets, predicted_targets, output_dict=True)
+    report = classification_report(true_targets, predicted_targets, output_dict=True, target_names=mapping_handler.keys())
     report['balanced_accuracy'] = balanced_accuracy
+
+    if run:
+        run[f"FOLD-{fold_index}/test/report"].log(report)
+
     return report
+# %%

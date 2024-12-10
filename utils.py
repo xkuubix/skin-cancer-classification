@@ -256,7 +256,7 @@ def prepare_data_for_fold(train_fold, val_fold, test_df, random_state, cv=5):
     return train_fold[columns_to_keep], val_fold[columns_to_keep], test_df[columns_to_keep]
 
 
-def print_metrics(fold_results):
+def print_metrics(fold_results, run=None):
     metrics_summary_macro = {
     'precision': [],
     'recall': [],
@@ -269,6 +269,8 @@ def print_metrics(fold_results):
     }
     accuracy = []
     balanced_accuracy = []
+    class_metrics = {}
+
     for fold_result in fold_results:
         for label, metrics in fold_result.items():
             if label == 'macro avg':
@@ -283,8 +285,13 @@ def print_metrics(fold_results):
                 accuracy.append(metrics)
             elif label == 'balanced_accuracy':
                 balanced_accuracy.append(metrics)
+            else:
+                if label not in class_metrics:
+                    class_metrics[label] = {'precision': [], 'recall': [], 'f1-score': []}
+                class_metrics[label]['precision'].append(metrics['precision'])
+                class_metrics[label]['recall'].append(metrics['recall'])
+                class_metrics[label]['f1-score'].append(metrics['f1-score'])
 
-# Convert lists to numpy arrays for easy statistical calculations
     for metric in metrics_summary_weighted:
         metrics_summary_weighted[metric] = np.array(metrics_summary_weighted[metric])
     for metric in metrics_summary_macro:
@@ -292,24 +299,44 @@ def print_metrics(fold_results):
     accuracy = np.array(accuracy)
     balanced_accuracy = np.array(balanced_accuracy)
 
-# Compute mean and standard deviation for each metric
     digits = 6
     print("\nSummary of performance metrics (weighted avg):")
     for metric, values in metrics_summary_weighted.items():
         mean = np.mean(values)
         std = np.std(values)
         print(f"{metric.capitalize():9s}\tMean = {mean:.{digits}f},\tSD = {std:.{digits}f}")
+        if run:
+            run[f"metrics/weighted/{metric}/mean"].append(mean)
+            run[f"metrics/weighted/{metric}/std"].append(std)
 
     print("\nSummary of performance metrics (macro avg):")
     for metric, values in metrics_summary_macro.items():
         mean = np.mean(values)
         std = np.std(values)
         print(f"{metric.capitalize():9s}\tMean = {mean:.{digits}f},\tSD = {std:.{digits}f}")
-
+        if run:
+            run[f"metrics/macro/{metric}/mean"].append(mean)
+            run[f"metrics/macro/{metric}/std"].append(std)
+    print("\nClass-wise performance metrics:")
+    for class_label, metrics in class_metrics.items():
+        print(f"\nClass: {class_label}")
+        for metric, values in metrics.items():
+            values = np.array(values)
+            mean = np.mean(values)
+            std = np.std(values)
+            print(f"{metric.capitalize():9s}\tMean = {mean:.{digits}f},\tSD = {std:.{digits}f}")
+            if run:
+                run[f"class_metrics/{class_label}/{metric}/mean"].append(mean)
+                run[f"class_metrics/{class_label}/{metric}/std"].append(std)
     accuracy_mean = np.mean(accuracy)
     accuracy_std = np.std(accuracy)
     print(f"\n{'Accuracy':9s}\tMean = {accuracy_mean:.{digits}f},\tSD = {accuracy_std:.{digits}f}")
-
+    if run:
+        run[f"metrics/micro/mean"].append(accuracy_mean)
+        run[f"metrics/micro/std"].append(accuracy_std)
     balanced_accuracy_mean = np.mean(balanced_accuracy)
     balanced_accuracy_std = np.std(balanced_accuracy)
+    if run:
+        run[f"metrics/balanced_acc/mean"].append(balanced_accuracy_mean)
+        run[f"metrics/balanced_acc/std"].append(balanced_accuracy_std)
     print(f"{'Accuracy (bal.)':9s}\tMean = {balanced_accuracy_mean:.{digits}f},\tSD = {balanced_accuracy_std:.{digits}f}")
