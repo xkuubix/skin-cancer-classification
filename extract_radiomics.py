@@ -103,15 +103,23 @@ transforms_val_test = A.Compose([
 
 # %%
 if config['radiomics']['extract']:
+    gray = config['radiomics']['gray']
+    rgb = config['radiomics']['rgb']
     extractor_train = RadiomicsExtractor(param_file='params.yml',
                                          transforms=transforms_train,
-                                         remove_hair=False)
+                                         remove_hair=False,
+                                         gray_features=gray,
+                                         rgb_featuregray_features=rgb)
     extractor_val = RadiomicsExtractor(param_file='params.yml',
-                                            transforms=transforms_val_test,
-                                            remove_hair=False)
+                                       transforms=transforms_val_test,
+                                       remove_hair=False,
+                                       gray_features=gray,
+                                       rgb_featuregray_features=rgb)
     extractor_test = RadiomicsExtractor(param_file='params.yml',
-                                            transforms=transforms_val_test,
-                                            remove_hair=False)
+                                        transforms=transforms_val_test,
+                                        remove_hair=False,
+                                        gray_features=gray,
+                                        rgb_featuregray_features=rgb)
     
     if config['radiomics']['mode'] == 'parallel':
         results_train = extractor_train.parallell_extraction(train_d)

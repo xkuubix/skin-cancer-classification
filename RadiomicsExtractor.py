@@ -32,7 +32,8 @@ class RadiomicsExtractor():
         serial_extraction: Performs serial extraction of radiomics features from a list of images.
     """
 
-    def  __init__(self, param_file: str, transforms=None, remove_hair=True):
+    def  __init__(self, param_file: str, transforms=None, remove_hair=True,
+                  rgb_features=True, gray_features=True):
         self.extractor = featureextractor.RadiomicsFeatureExtractor(param_file)
         msg = "\n\nEnabled Image Types:"
         msg += pretty_dict_str(self.extractor.enabledImagetypes, key_only=True)

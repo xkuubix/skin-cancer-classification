@@ -26,6 +26,8 @@ dataset:
 radiomics:
   extract: False # True, False, if False load from pkl
   mode: 'parallel' #serial, parallel
+  gray: True # True, False
+  rgb: True # True, False
   save: False # True, False
 
 net_train:
