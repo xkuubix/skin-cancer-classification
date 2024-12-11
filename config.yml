@@ -12,6 +12,7 @@ dir:
   pkl_val:     '/media/dysk_a/jr_buler/HAM10000/my_pickle/val_radiomic_features.pkl'
   pkl_test:    '/media/dysk_a/jr_buler/HAM10000/my_pickle/test_radiomic_features.pkl'
   inf:         '/media/dysk_a/jr_buler/HAM10000/my_pickle/info.txt'
+  models:      '/media/dysk_a/jr_buler/HAM10000/models/'
 
 dataset:
   mode: 'hybrid' # images, radiomics, hybrid
