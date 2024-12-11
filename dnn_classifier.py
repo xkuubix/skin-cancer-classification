@@ -1,5 +1,7 @@
 # %% IMPORTS AND SETTINGS
+import os
 import yaml
+import uuid
 import pickle
 import torch
 import numpy as np
@@ -162,6 +164,13 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     # Test
     fold_result = test_net(model, test_dl, config, device, mapping_handler, run, fold_index)
     fold_results.append(fold_result)
+
+
+    file_name = f"model_fold_{fold_index}_{uuid.uuid4().hex}.pth"
+    full_path = os.path.join(config['dir']['models'], file_name)
+    torch.save(net_dict, full_path)
+    if run:
+        run[f'fold_{fold_index} model'] = file_name
 
 utils.print_metrics(fold_results, run)
 
