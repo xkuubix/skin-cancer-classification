@@ -155,7 +155,8 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
         optimizer = torch.optim.SGD(model.parameters(),
                                     lr=config['net_train']['lr'],
                                     weight_decay=config['net_train']['wd'])
-
+    if run:
+        run['fold'] = fold_index
     # Train
     net_dict = train_net(model, train_dl, val_dl,
                          criterion, optimizer,
