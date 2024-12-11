@@ -168,6 +168,7 @@ if config['radiomics']['extract']:
             file.write('\n\nData test img:' + str(config['dir']['img_test']))
             file.write('\n\nData test seg:' + str(config['dir']['seg_test']))
             file.write('\n\nNumber of Radiomic features:' + str(len(train_df.columns[10:])))
+            file.write(f"\n{config['radiomics']['gray']=} {config['radiomics']['rgb']=}")
             file.write('\n')
         logger.info(f"Saved extraction details in {config['dir']['inf']}")
 # %% Logging in constructor
