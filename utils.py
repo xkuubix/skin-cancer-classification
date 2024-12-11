@@ -231,7 +231,7 @@ def generate_sampler(target):
 
 def prepare_data_for_fold(train_fold, val_fold, test_df, random_state, cv=5):
     
-    print(f"No. of all features: {len(feature_columns)}")
+    print(f"No. of all features: {len(train_fold.columns[10:])}")
     train_fold, val_fold, test_df, _ = remove_train_duplicates(train_fold.copy(),
                                                                val_fold.copy(),
                                                                test_df.copy())
