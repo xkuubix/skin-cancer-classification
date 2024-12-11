@@ -230,15 +230,21 @@ def generate_sampler(target):
 
 
 def prepare_data_for_fold(train_fold, val_fold, test_df, random_state, cv=5):
-
+    
+    print(f"No. of all features: {len(feature_columns)}")
+    train_fold, val_fold, test_df, _ = remove_train_duplicates(train_fold.copy(),
+                                                               val_fold.copy(),
+                                                               test_df.copy())
     feature_columns = train_fold.columns[10:]
+    print(f"No. features: {len(feature_columns)}")
+    
     X_train = train_fold[feature_columns].values
     
     scaler = StandardScaler()
     mapping_handler = MappingHandler().mapping
     X_train_scaled = scaler.fit_transform(X_train)
     y_train = [int(mapping_handler[label.upper()]) for label in train_fold['dx'].values]
-    
+
     lasso = LassoCV(cv=cv, random_state=random_state, max_iter=10000, tol=0.001)
     lasso.fit(X_train_scaled, y_train)
     selected_features = [feature_columns[i] for i in range(len(feature_columns)) if lasso.coef_[i] != 0]
@@ -254,6 +260,20 @@ def prepare_data_for_fold(train_fold, val_fold, test_df, random_state, cv=5):
     columns_to_keep = list(metadata_columns) + selected_features
 
     return train_fold[columns_to_keep], val_fold[columns_to_keep], test_df[columns_to_keep]
+
+
+def remove_train_duplicates(train, val, test):
+    duplicate_columns = []
+    for i, col1 in enumerate(train.columns):
+        for j, col2 in enumerate(train.columns[i + 1:]):
+            if train[col1].equals(train[col2]):
+                duplicate_columns.append(col2)
+    train = train.drop(columns=duplicate_columns)
+    val = val.drop(columns=duplicate_columns)
+    test = test.drop(columns=duplicate_columns)
+    print(f"Removed duplicate {len(duplicate_columns)} columns")
+    return train, val, test, duplicate_columns
+
 
 
 def print_metrics(fold_results, run=None):
