@@ -110,6 +110,8 @@ def train_net(net, train_dl, val_dl, criterion, optimizer, config, device, run=N
             if early_stop_counter >= patience:
                 print("Early stopping triggered!")
                 break
+        if run:
+            run['patience_counter'] = patience - early_stop_counter
     
     print('Finished Training')
     return best_model
