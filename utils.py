@@ -314,7 +314,7 @@ def print_metrics(fold_results, run=None):
                 micro_roc_auc.append(metrics)
             else:
                 if label not in class_metrics:
-                    class_metrics[label] = {'precision': [], 'recall': [], 'f1-score': []}
+                    class_metrics[label] = {'precision': [], 'recall': [], 'f1-score': [], 'roc_auc': []}
                 class_metrics[label]['precision'].append(metrics['precision'])
                 class_metrics[label]['recall'].append(metrics['recall'])
                 class_metrics[label]['f1-score'].append(metrics['f1-score'])
