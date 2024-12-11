@@ -300,10 +300,12 @@ def print_metrics(fold_results, run=None):
                 metrics_summary_macro['precision'].append(metrics['precision'])
                 metrics_summary_macro['recall'].append(metrics['recall'])
                 metrics_summary_macro['f1-score'].append(metrics['f1-score'])
+                metrics_summary_macro['roc_auc'].append(metrics['roc_auc'])
             elif label == 'weighted avg':
                 metrics_summary_weighted['precision'].append(metrics['precision'])
                 metrics_summary_weighted['recall'].append(metrics['recall'])
                 metrics_summary_weighted['f1-score'].append(metrics['f1-score'])
+                metrics_summary_weighted['roc_auc'].append(metrics['roc_auc'])
             elif label == 'accuracy':
                 accuracy.append(metrics)
             elif label == 'balanced_accuracy':
@@ -316,6 +318,7 @@ def print_metrics(fold_results, run=None):
                 class_metrics[label]['precision'].append(metrics['precision'])
                 class_metrics[label]['recall'].append(metrics['recall'])
                 class_metrics[label]['f1-score'].append(metrics['f1-score'])
+                class_metrics[label]['roc_auc'].append(metrics['roc_auc'])
 
     for metric in metrics_summary_weighted:
         metrics_summary_weighted[metric] = np.array(metrics_summary_weighted[metric])
