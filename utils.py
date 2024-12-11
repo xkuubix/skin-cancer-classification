@@ -261,11 +261,13 @@ def print_metrics(fold_results, run=None):
     'precision': [],
     'recall': [],
     'f1-score': [],
+    'roc_auc': []
     }
     metrics_summary_weighted = {
     'precision': [],
     'recall': [],
     'f1-score': [],
+    'roc_auc': []
     }
     accuracy = []
     balanced_accuracy = []
