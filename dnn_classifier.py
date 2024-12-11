@@ -44,17 +44,11 @@ transforms_train = A.Compose([
     A.ColorJitter(p=0.5),
     A.GaussNoise(p=0.5),
     A.Resize(img_size, img_size),
-    # A.Normalize([0.76530149, 0.54760609, 0.5719637], [0.14010777, 0.15290574, 0.17048959],
-                # always_apply=True),
-    # A.Resize(img_size, img_size),
-    A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], always_apply=True)
+    A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], always_apply=True),
     ])
 
 transforms_val_test = A.Compose([
     A.Resize(img_size, img_size),
-    # A.Normalize([0.76530149, 0.54760609, 0.5719637], [0.14010777, 0.15290574, 0.17048959],
-                # always_apply=True),
-    # A.Resize(img_size, img_size),
     A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], always_apply=True),
     ])
 
