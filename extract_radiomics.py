@@ -53,53 +53,44 @@ train_d = train_df.to_dict(orient='records')
 test_d = test_df.to_dict(orient='records')
 val_d = val_df.to_dict(orient='records')
 # %%
-
+image_size = config['dataset']['img_size']
 if config['dataset']['train_sampling']['method'] == 'oversample':
     train_original = train_d
     train_d = utils.oversample_data(train_d)
     transforms_train = A.Compose([
-        # A.Affine(scale=(0.9, 1),
-        #          shear=(-10, 10),
-        #          rotate=(-45, 45),
-        #          p=1.),
-        # A.HorizontalFlip(p=0.5),
-        # A.VerticalFlip(p=0.5),
-        # # A.GaussNoise(p=0.5),
-        # A.CLAHE(p=0.5),
-        # # A.RandomBrightnessContrast(brightness_limit=0.1,
-        # #                            contrast_limit=0.1,
-        # #                            p=0.5),
-        # A.OneOf([
-        #     A.OpticalDistortion(p=0.3),
-        #     A.GridDistortion(distort_limit=0.1, p=0.7),
-        # ], p=0.5),
-        A.Resize(256, 256),
-        A.Normalize(mean=0.0, std=1.0)
+        A.Affine(scale=(0.9, 1),
+                 shear=(-10, 10),
+                 rotate=(-45, 45),
+                 p=1.),
+        A.HorizontalFlip(p=0.5),
+        A.VerticalFlip(p=0.5),
+        # A.GaussNoise(p=0.5),
+        A.CLAHE(p=0.5),
+        # A.RandomBrightnessContrast(brightness_limit=0.1,
+        #                            contrast_limit=0.1,
+        #                            p=0.5),
+        A.OneOf([
+            A.OpticalDistortion(p=0.3),
+            A.GridDistortion(distort_limit=0.1, p=0.7),
+        ], p=0.5),
+        A.Resize(image_size, image_size),
+        A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], always_apply=True),
     ])
 elif config['dataset']['train_sampling']['method'] == 'undersample':
     train_d = utils.undersample_data(train_d, seed=seed, multiplier=config['dataset']['train_sampling']['multiplier'])
     transforms_train = A.Compose([])
 elif config['dataset']['train_sampling']['method'] == 'none':
     transforms_train = A.Compose([])
-
-
-# not resized
-# Mean (RGB): [0.7652978  0.5476034  0.57196146]
-# Standard Deviation (RGB): [0.14053943 0.1533344  0.1710358 ]
-
-# resized
-# Mean (RGB): [0.76530149 0.54760609 0.5719637 ]
-# Standard Deviation (RGB): [0.14010777 0.15290574 0.17048959]
-
-transforms_train = A.Compose([
-        A.Resize(256, 256),
-        A.Normalize([0.76530149, 0.54760609, 0.5719637], [0.14010777, 0.15290574, 0.17048959])
-])
-
+# %%
+if config['dataset']['train_sampling']['method'] != 'oversample':
+    transforms_train = A.Compose([
+            A.Resize(image_size, image_size),
+            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], always_apply=True)
+            ])
 transforms_val_test = A.Compose([
-        A.Resize(256, 256),
-        A.Normalize([0.76530149, 0.54760609, 0.5719637], [0.14010777, 0.15290574, 0.17048959])
-])
+        A.Resize(image_size, image_size),
+        A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], always_apply=True)
+        ])
 
 # %%
 if config['radiomics']['extract']:
@@ -138,12 +129,8 @@ if config['radiomics']['extract']:
     test_df = pd.concat([test_df, pd.DataFrame(results_test)], axis=1)
     
     if config['radiomics']['save']:
-        # if os.path.exists(config['dir']['pkl_train']):
-        #     os.remove(config['dir']['pkl_train'])
         with open(config['dir']['pkl_train'], 'wb') as handle:
             pickle.dump(train_df, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        #     for i in range(len(train_df)):
-        #         pickle.dump(train_df.iloc[i:i+1], handle, protocol=pickle.HIGHEST_PROTOCOL)
         with open(config['dir']['pkl_val'], 'wb') as handle:
             pickle.dump(val_df, handle, protocol=pickle.HIGHEST_PROTOCOL)
         with open(config['dir']['pkl_test'], 'wb') as handle:
