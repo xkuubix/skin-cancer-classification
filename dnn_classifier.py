@@ -3,6 +3,7 @@ import os
 import yaml
 import uuid
 import pickle
+import joblib
 import torch
 import numpy as np
 import pandas as pd
@@ -13,7 +14,6 @@ import albumentations as A
 from Dataset import HAM10000, MappingHandler
 from sklearn.model_selection import StratifiedKFold  #, KFold
 from model import DeepRadiomicsClassifier, RadiomicsClassifier, ImageClassifier
-# TODO dodać neptune albo w&b
 import neptune
 
 
@@ -94,14 +94,20 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     train_fold = df.iloc[train_indices]
     val_fold = df.iloc[val_indices]
     print('--------------------------------')
-    print(f"Fold {fold_index}:")
+    UUID = uuid.uuid4().hex
+    print(f"Fold {fold_index} - UUID: {UUID}")
     print(f"  Train: len={len(train_indices)}")
     print(f"  Train class distribution: {df.iloc[train_indices]['dx'].value_counts(normalize=True)}")
     print(f"  Val:  len={len(val_indices)}")
     print(f"  Validation class distribution: {df.iloc[val_indices]['dx'].value_counts(normalize=True)}")
     # feature selecct + normalization (copy df cuz it is in the loop)
-    train_fold, val_fold, test_fold = utils.prepare_data_for_fold(
+    train_fold, val_fold, test_fold, save_data = utils.prepare_data_for_fold(
         train_fold.copy(), val_fold.copy(), test_df.copy(), random_state=seed)
+    file_name = f"features_fold_{fold_index}_{UUID}.pth"
+    if run:
+        run[f'fold_{fold_index} features'] = file_name
+    full_path = os.path.join(config['dir']['models'], file_name)
+    joblib.dump(save_data, full_path)
 
     print(f"Training mean (column 11): {train_fold.iloc[:, 10].mean()}")
     print(f"Validation mean (column 11): {val_fold.iloc[:, 10].mean()}")
@@ -161,7 +167,7 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     fold_results.append(fold_result)
 
 
-    file_name = f"model_fold_{fold_index}_{uuid.uuid4().hex}.pth"
+    file_name = f"model_fold_{fold_index}_{UUID}.pth"
     full_path = os.path.join(config['dir']['models'], file_name)
     torch.save(net_dict, full_path)
     if run:
