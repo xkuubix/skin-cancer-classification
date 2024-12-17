@@ -187,3 +187,33 @@ def test_net(net, test_dl, config, device, mapping_handler, run=None, fold_index
 
     return report
 # %%
+
+
+def get_proba(net, test_dl, config, device):
+    net.eval()
+    probabilities = []
+    with torch.no_grad():
+        for data in test_dl:
+            if config['dataset']['mode'] in ['images', 'hybrid']:  
+                image = data['image'].to(device)
+            if config['dataset']['mode'] in ['radiomics', 'hybrid']:
+                radiomic_features = data['features'].to(device)
+            else:
+                radiomic_features = None
+            target_idx = data['label'].to(device)
+
+            if config['dataset']['mode'] in ['hybrid']:
+                outputs = net(image, radiomic_features)
+            elif config['dataset']['mode'] in ['images']:
+                outputs = net(image)
+            elif config['dataset']['mode'] in ['radiomics']:
+                outputs = net(radiomic_features)
+
+            if config['net_train']['criterion'] == 'bce':
+                predicted = torch.round(torch.sigmoid(outputs.reshape(-1)))
+                probs = torch.sigmoid(outputs).reshape(-1)
+            elif config['net_train']['criterion'] == 'ce':
+                _, predicted = torch.max(outputs.data, 1)
+                probs = torch.softmax(outputs, dim=1).cpu().numpy()
+            probabilities.extend(probs)
+    return probabilities
