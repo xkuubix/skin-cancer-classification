@@ -267,7 +267,8 @@ def remove_train_duplicates(train, val, test):
     for i, col1 in enumerate(train.columns):
         for j, col2 in enumerate(train.columns[i + 1:]):
             if train[col1].equals(train[col2]):
-                duplicate_columns.append(col2)
+                if col2 not in duplicate_columns:
+                    duplicate_columns.append(col2)
     train = train.drop(columns=duplicate_columns)
     val = val.drop(columns=duplicate_columns)
     test = test.drop(columns=duplicate_columns)
