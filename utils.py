@@ -258,8 +258,13 @@ def prepare_data_for_fold(train_fold, val_fold, test_df, random_state, cv=5):
     # keep only the selected features and metadata columns
     metadata_columns = train_fold.columns[:10]  # Adjust as necessary for metadata columns
     columns_to_keep = list(metadata_columns) + selected_features
-
-    return train_fold[columns_to_keep], val_fold[columns_to_keep], test_df[columns_to_keep]
+    save_data = {
+        'selected_features': selected_features,
+        'scaler': scaler,
+        'lasso_model': lasso,
+        'metadata_columns': list(metadata_columns)
+    }
+    return train_fold[columns_to_keep], val_fold[columns_to_keep], test_df[columns_to_keep], save_data
 
 
 def remove_train_duplicates(train, val, test):
