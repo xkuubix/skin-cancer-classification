@@ -9,12 +9,10 @@ import numpy as np
 import albumentations as A
 from Dataset import HAM10000
 # from pytorch_tabnet.tab_network import TabNet
-from pytorch_tabnet.tab_model import TabNetClassifier
+from pytorch_tabnet.tab_network import TabNet
 from sklearn.utils.class_weight import compute_class_weight
+from sklearn.metrics import balanced_accuracy_score
 from Dataset import MappingHandler
-from pytorch_tabnet.augmentations import ClassificationSMOTE
-from sklearn.metrics import classification_report, roc_auc_score, balanced_accuracy_score
-from utils import print_metrics
 from sklearn.model_selection import StratifiedKFold
 
 import warnings
@@ -78,7 +76,7 @@ mapping_handler = MappingHandler()
 for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])):
     train_fold = df.iloc[train_indices]
     val_fold = df.iloc[val_indices]
-
+    
     combined = pd.concat([train_fold.copy(), val_fold.copy()], ignore_index=True)
     combined_features = combined[combined.columns[10:]]
     combined_features = combined_features.applymap(lambda x: str(x) if isinstance(x, (list, np.ndarray)) else x)
@@ -99,100 +97,64 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     X_test = np.vstack([x['features'] for x in test_ds])
     y_test = np.array([x['label'] for x in test_ds])
 
-
     classes = np.unique(y_train)
     class_weights = compute_class_weight('balanced', classes=classes, y=y_train)
-    class_weights_dict = {cls: weight for cls, weight in zip(classes, class_weights)}
+    class_weights = torch.from_numpy(class_weights).float()
+    # class_weights_dict = {cls: weight for cls, weight in zip(classes, class_weights)}
+
+    input_dim = X_train[0].shape[0]
+    output_dim = 7
+    group_attention_matrix = torch.randn(output_dim, input_dim)
+
+    model = TabNet(input_dim=input_dim, output_dim=output_dim,
+                   group_attention_matrix=group_attention_matrix,
+                   n_d=64, n_a=64, n_steps=5, gamma=1.5,
+                   n_independent=2, n_shared=2,
+                   epsilon=1e-15, momentum=0.02)
+
+    X_train = torch.from_numpy(X_train).float()
+    y_train = torch.from_numpy(y_train).long()
+    X_val = torch.from_numpy(X_val).float()
+    y_val = torch.from_numpy(y_val).long()
+    X_test = torch.from_numpy(X_test).float()
+    y_test = torch.from_numpy(y_test).long()
 
 
-    # cat_idxs = []
-    # cat_dims = []
+    # smote = SMOTE(random_state=seed)
+    # X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
+    # X_train = torch.from_numpy(X_train_resampled).float()
+    # y_train = torch.from_numpy(y_train_resampled).long()
 
-    # unsupervised_model = TabNetPretrainer(
-    #     cat_idxs=cat_idxs,
-    #     cat_dims=cat_dims,
-    #     cat_emb_dim=3,
-    #     optimizer_fn=torch.optim.Adam,
-    #     optimizer_params=dict(lr=2e-4),
-    #     mask_type='entmax',  # "sparsemax",
-    #     n_shared_decoder=2,  # nb shared glu for decoding
-    #     n_indep_decoder=2,  # nb independent glu for decoding
-    #     verbose=5,
-    #     device_name='cpu'
-    # )
-    # unsupervised_model.fit(
-    #     X_train=X_train,
-    #     eval_set=[X_val],
-    #     max_epochs=config['net_train']['epochs'],
-    #     patience=150, batch_size=2048,
-    #     virtual_batch_size=128, num_workers=0,
-    #     drop_last=False,
-    #     pretraining_ratio=0.5,
-    # )
+    optimizer = torch.optim.Adam(model.parameters(), lr=config['net_train']['lr'])
+    criterion = torch.nn.CrossEntropyLoss()
 
+    for epoch in range(config['net_train']['epochs']):
+        model.train()
 
+        optimizer.zero_grad()
+        outputs = model(X_train)
+        
+        preds = torch.argmax(outputs[0], dim=1)
+        accuracy = (preds == y_train).float().mean().item() * 100
+        balanced_acc = balanced_accuracy_score(y_train.cpu(), preds.cpu()) * 100
 
-    model = TabNetClassifier(
-        n_d=64, n_a=64, n_steps=5, gamma=1.5,
-        n_independent=2, n_shared=2,
-        epsilon=1e-15, momentum=0.02,
-        clip_value=2., lambda_sparse=1e-4,
-        seed=seed, verbose=1,
-        device_name='cpu',
-        # optimizer_fn=torch.optim.SGD,
-    )
+        loss = criterion(outputs[0], y_train)
+        loss.backward()
+        optimizer.step()
 
+        model.eval()
+        with torch.no_grad():
+            val_outputs = model(X_val)
+            val_loss = criterion(val_outputs[0], y_val)
+            
+            val_preds = torch.argmax(val_outputs[0], dim=1)
+            val_accuracy = (val_preds == y_val).float().mean().item() * 100
+            val_balanced_acc = balanced_accuracy_score(y_val.cpu(), val_preds.cpu()) * 100
 
+        print(f"Epoch {epoch+1}/{config['net_train']['epochs']}: "
+                f"Train loss: {loss.item():.4f}, Train acc: {accuracy:.2f}%, "
+                f"Train balanced acc: {balanced_acc:.2f}%, "
+                f"Val loss: {val_loss.item():.4f}, Val acc: {val_accuracy:.2f}%, "
+                f"Val balanced acc: {val_balanced_acc:.2f}%")
 
-    aug = ClassificationSMOTE(device_name='cpu', p=0.2, seed=seed)
-
-    model.fit(
-        X_train=X_train, y_train=y_train,
-        eval_set=[(X_val, y_val)],
-        eval_name=['val'],
-        eval_metric=['accuracy', 'balanced_accuracy', 'logloss'],
-        max_epochs=config['net_train']['epochs'],
-        patience=20, batch_size=config['net_train']['batch_size'],
-        virtual_batch_size=128, num_workers=config['net_train']['num_workers'],
-        drop_last=False,
-        weights=class_weights_dict,
-        augmentations=aug,
-        # from_unsupervised=unsupervised_model
-    )
-
-    val_preds = model.predict(X_val)
-    accuracy = (val_preds == y_val).mean() * 100
-    fold_results.append(accuracy)
-    logger.info(f"Fold {fold_index + 1}, Validation Accuracy: {accuracy:.2f}%")
-
-    test_preds = model.predict(X_test)
-    test_accuracy = (test_preds == y_test).mean() * 100
-    test_results.append(test_accuracy)
-    report = classification_report(y_test, test_preds, target_names=mapping_handler.mapping.keys(), output_dict=True)
-    probabilities = model.predict_proba(X_test)
-    true_targets = y_test
-    roc_all = roc_auc_score(true_targets, probabilities,
-                            multi_class='ovr', average=None)
-    
-    roc_micro = roc_auc_score(true_targets, probabilities,
-                              multi_class='ovr', average="micro")
-    for item in range(len(mapping_handler.mapping.keys())):
-        label = list(mapping_handler.mapping.keys())[item]
-        report[label]['roc_auc'] = roc_all[item]
-
-    report['weighted avg']["roc_auc"] = roc_auc_score(true_targets, probabilities,
-                                                      multi_class='ovr', average="weighted")
-    report['macro avg']['roc_auc'] = roc_auc_score(true_targets, probabilities,
-                                                   multi_class='ovr', average="macro")
-    report['roc_auc_micro'] = roc_micro
-    report['balanced_accuracy'] = balanced_accuracy_score(true_targets, test_preds)
-
-    
-    cls_reports.append(report)
-    logger.info(f"Fold {fold_index + 1}, Test Accuracy: {test_accuracy:.2f}%")
-
-print(f"Mean Validation Accuracy: {np.mean(fold_results):.4f}")
-print(f"Mean Test Accuracy: {np.mean(test_results):.4f}")
-
-print_metrics(cls_reports)
 # %%
