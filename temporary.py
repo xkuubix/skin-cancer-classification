@@ -14,6 +14,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import balanced_accuracy_score
 from Dataset import MappingHandler
 from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import StandardScaler
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -104,13 +105,21 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
 
     input_dim = X_train[0].shape[0]
     output_dim = 7
-    group_attention_matrix = torch.randn(output_dim, input_dim)
+    group_attention_matrix = torch.randn(1, input_dim)
 
     model = TabNet(input_dim=input_dim, output_dim=output_dim,
                    group_attention_matrix=group_attention_matrix,
                    n_d=64, n_a=64, n_steps=5, gamma=1.5,
                    n_independent=2, n_shared=2,
                    epsilon=1e-15, momentum=0.02)
+    lambda_sparse=1e-4
+
+
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_val = scaler.transform(X_val)
+    X_test = scaler.transform(X_test)
 
     X_train = torch.from_numpy(X_train).float()
     y_train = torch.from_numpy(y_train).long()
@@ -119,42 +128,87 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     X_test = torch.from_numpy(X_test).float()
     y_test = torch.from_numpy(y_test).long()
 
-
     # smote = SMOTE(random_state=seed)
     # X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
     # X_train = torch.from_numpy(X_train_resampled).float()
     # y_train = torch.from_numpy(y_train_resampled).long()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config['net_train']['lr'])
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss(class_weights)
+
+    best_val_loss = float('inf')
+    patience = 1000
+    counter = 0
+    best_model_state_dict = None
 
     for epoch in range(config['net_train']['epochs']):
         model.train()
 
-        optimizer.zero_grad()
-        outputs = model(X_train)
-        
-        preds = torch.argmax(outputs[0], dim=1)
-        accuracy = (preds == y_train).float().mean().item() * 100
-        balanced_acc = balanced_accuracy_score(y_train.cpu(), preds.cpu()) * 100
+        for param in model.parameters():
+            param.grad = None
 
-        loss = criterion(outputs[0], y_train)
+        output, M_loss = model(X_train)
+        output = torch.nn.functional.softmax(output, dim=1)
+        loss = criterion(output, y_train)
+        loss = loss - lambda_sparse * M_loss
+
         loss.backward()
         optimizer.step()
 
+        preds = torch.argmax(output, dim=1)
+        accuracy = (preds == y_train).float().mean().item() * 100
+        balanced_acc = balanced_accuracy_score(y_train.cpu(), preds.cpu()) * 100
+
         model.eval()
         with torch.no_grad():
-            val_outputs = model(X_val)
-            val_loss = criterion(val_outputs[0], y_val)
-            
-            val_preds = torch.argmax(val_outputs[0], dim=1)
+            val_output, val_M_loss = model(X_val)
+            val_output = torch.nn.functional.softmax(val_output, dim=1)
+            val_loss = criterion(val_output, y_val)
+            val_loss = val_loss - lambda_sparse * val_M_loss
+
+            val_preds = torch.argmax(val_output, dim=1)
             val_accuracy = (val_preds == y_val).float().mean().item() * 100
             val_balanced_acc = balanced_accuracy_score(y_val.cpu(), val_preds.cpu()) * 100
 
-        print(f"Epoch {epoch+1}/{config['net_train']['epochs']}: "
-                f"Train loss: {loss.item():.4f}, Train acc: {accuracy:.2f}%, "
-                f"Train balanced acc: {balanced_acc:.2f}%, "
-                f"Val loss: {val_loss.item():.4f}, Val acc: {val_accuracy:.2f}%, "
-                f"Val balanced acc: {val_balanced_acc:.2f}%")
+        if (epoch + 1) % 250 == 0:
+            print(f"Epoch {epoch+1}/{config['net_train']['epochs']}: "
+                  f"Train loss: {loss.item():.4f}, Train acc: {accuracy:.2f}%, "
+                  f"Train balanced acc: {balanced_acc:.2f}%, "
+                  f"Val loss: {val_loss.item():.4f}, Val acc: {val_accuracy:.2f}%, "
+                  f"Val balanced acc: {val_balanced_acc:.2f}%")
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            best_model_state_dict = model.state_dict()
+            counter = 0
+        else:
+            counter += 1
+
+        if counter >= patience:
+            print(f"Epoch {epoch+1}/{config['net_train']['epochs']}: "
+                  f"Train loss: {loss.item():.4f}, Train acc: {accuracy:.2f}%, "
+                  f"Train balanced acc: {balanced_acc:.2f}%, "
+                  f"Val loss: {val_loss.item():.4f}, Val acc: {val_accuracy:.2f}%, "
+                  f"Val balanced acc: {val_balanced_acc:.2f}%")
+            print("Early stopping triggered")
+            break
+
+    if best_model_state_dict is not None:
+        model.load_state_dict(best_model_state_dict)
+        print(f"Best model found at epoch {epoch+1-counter}")
+
+    model.eval()
+    with torch.no_grad():
+        test_output, test_M_loss = model(X_test)
+        test_output = torch.nn.functional.softmax(test_output, dim=1)
+        test_loss = criterion(test_output, y_test)
+        test_loss = test_loss - lambda_sparse * test_M_loss
+
+        test_preds = torch.argmax(test_output, dim=1)
+        test_accuracy = (test_preds == y_test).float().mean().item() * 100
+        test_balanced_acc = balanced_accuracy_score(y_test.cpu(), test_preds.cpu()) * 100
+
+    print(f"Test loss: {test_loss.item():.4f}, Test acc: {test_accuracy:.2f}%, "
+          f"Test balanced acc: {test_balanced_acc:.2f}%")
 
 # %%
