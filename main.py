@@ -10,8 +10,9 @@ import albumentations as A
 from Dataset import HAM10000
 # from pytorch_tabnet.tab_network import TabNet
 from pytorch_tabnet.tab_model import TabNetClassifier
+from sklearn.utils.class_weight import compute_class_weight
 from Dataset import MappingHandler
-# from pytorch_tabnet.augmentations import ClassificationSMOTE
+from pytorch_tabnet.augmentations import ClassificationSMOTE
 from sklearn.metrics import classification_report, roc_auc_score, balanced_accuracy_score
 from utils import print_metrics
 from sklearn.model_selection import StratifiedKFold
@@ -78,8 +79,14 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     train_fold = df.iloc[train_indices]
     val_fold = df.iloc[val_indices]
 
-    train_fold, val_fold, test_fold = utils.prepare_data_for_fold(
-    train_fold.copy(), val_fold.copy(), test_df.copy(), random_state=seed)
+    combined = pd.concat([train_fold.copy(), val_fold.copy()], ignore_index=True)
+    combined_features = combined[combined.columns[10:]]
+    combined_features = combined_features.applymap(lambda x: str(x) if isinstance(x, (list, np.ndarray)) else x)
+    columns_to_keep = combined_features.T.drop_duplicates().T.columns
+    columns_to_keep = combined.columns[:10].tolist() + columns_to_keep.tolist()
+    train_fold = train_fold[columns_to_keep]
+    val_fold = val_fold[columns_to_keep]
+    test_fold = test_df[columns_to_keep]
 
     train_ds = HAM10000(df=train_fold, transform=transforms_train, mode=config['dataset']['mode'])
     val_ds = HAM10000(df=val_fold, transform=transforms_val_test, mode=config['dataset']['mode'])
@@ -92,25 +99,65 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     X_test = np.vstack([x['features'] for x in test_ds])
     y_test = np.array([x['label'] for x in test_ds])
 
+
+    classes = np.unique(y_train)
+    class_weights = compute_class_weight('balanced', classes=classes, y=y_train)
+    class_weights_dict = {cls: weight for cls, weight in zip(classes, class_weights)}
+
+
+    # cat_idxs = []
+    # cat_dims = []
+
+    # unsupervised_model = TabNetPretrainer(
+    #     cat_idxs=cat_idxs,
+    #     cat_dims=cat_dims,
+    #     cat_emb_dim=3,
+    #     optimizer_fn=torch.optim.Adam,
+    #     optimizer_params=dict(lr=2e-4),
+    #     mask_type='entmax',  # "sparsemax",
+    #     n_shared_decoder=2,  # nb shared glu for decoding
+    #     n_indep_decoder=2,  # nb independent glu for decoding
+    #     verbose=5,
+    #     device_name='cpu'
+    # )
+    # unsupervised_model.fit(
+    #     X_train=X_train,
+    #     eval_set=[X_val],
+    #     max_epochs=config['net_train']['epochs'],
+    #     patience=150, batch_size=2048,
+    #     virtual_batch_size=128, num_workers=0,
+    #     drop_last=False,
+    #     pretraining_ratio=0.5,
+    # )
+
+
+
     model = TabNetClassifier(
-        n_d=64, n_a=64, n_steps=3, gamma=1.3,
+        n_d=64, n_a=64, n_steps=5, gamma=1.5,
         n_independent=2, n_shared=2,
         epsilon=1e-15, momentum=0.02,
-        clip_value=2., lambda_sparse=1e-3,
+        clip_value=2., lambda_sparse=1e-4,
         seed=seed, verbose=1,
         device_name='cpu',
-        optimizer_fn=torch.optim.SGD,
+        # optimizer_fn=torch.optim.SGD,
     )
+
+
+
+    aug = ClassificationSMOTE(device_name='cpu', p=0.2, seed=seed)
 
     model.fit(
         X_train=X_train, y_train=y_train,
         eval_set=[(X_val, y_val)],
         eval_name=['val'],
-        eval_metric=['logloss'],
+        eval_metric=['accuracy', 'balanced_accuracy', 'logloss'],
         max_epochs=config['net_train']['epochs'],
-        patience=10, batch_size=config['net_train']['batch_size'],
+        patience=20, batch_size=config['net_train']['batch_size'],
         virtual_batch_size=128, num_workers=config['net_train']['num_workers'],
-        drop_last=False
+        drop_last=False,
+        weights=class_weights_dict,
+        augmentations=aug,
+        # from_unsupervised=unsupervised_model
     )
 
     val_preds = model.predict(X_val)

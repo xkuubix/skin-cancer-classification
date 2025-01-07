@@ -113,9 +113,9 @@ if config['radiomics']['extract']:
                                         rgb_features=rgb)
     
     if config['radiomics']['mode'] == 'parallel':
-        results_train = extractor_train.parallell_extraction(train_d)
-        results_val = extractor_val.parallell_extraction(val_d)
-        results_test = extractor_test.parallell_extraction(test_d)
+        results_train = extractor_train.parallell_extraction(train_d, n_processes=4)
+        results_val = extractor_val.parallell_extraction(val_d, n_processes=4)
+        results_test = extractor_test.parallell_extraction(test_d, n_processes=4)
     elif config['radiomics']['mode'] == 'serial':
         results_train = extractor_train.serial_extraction(train_d)
         results_val = extractor_val.serial_extraction(val_d)
