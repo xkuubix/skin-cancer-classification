@@ -288,7 +288,20 @@ print(normalized_contingency_table)
 nodes = list(np.unique(df[['Ground Truth', 'Prediction 1', 'Prediction 2']].values))
 node_mapping = {label: idx for idx, label in enumerate(nodes)}
 links = []
-colors = ['#320a5e', '#fbb61a', '#ed6925', '#bc3754', '#781c6d', '#e377c2', '#000004']
+colors = ['#323232', '#fbb61a', '#ff2225', '#bcaa54', '#111c6d', '#e377c2', '#4422ff']
+
+alpha = 0.7
+colors = [
+    f'rgba(50,50,50,{alpha})',   # #323232
+    f'rgba(251,182,26,{alpha})', # #fbb61a
+    f'rgba(255,34,37,{alpha})',  # #ff2225
+    f'rgba(188,170,84,{alpha})', # #bcaa54
+    f'rgba(17,28,109,{alpha})',  # #111c6d
+    f'rgba(227,119,194,{alpha})',# #e377c2
+    f'rgba(68,34,255,{alpha})'   # #4422ff
+]
+
+
 
 link_colors = []
 for (gt, pred1), row in contingency_table.iterrows():
@@ -317,22 +330,122 @@ sankey_fig = go.Figure(go.Sankey(
     node=dict(
         # color=['blue', 'green', 'red', 'purple', 'orange', 'pink', 'brown']
         color = colors * 3,
-        pad=100,
-        thickness=10,
-        line=dict(color="black", width=5),
-        label=labels,
+        pad=80,
+        thickness=100,
+        line=dict(color="black", width=3),
+        # label=labels,
+
     ),
     link=dict(
         source=[link['source'] for link in links],
         target=[link['target'] for link in links],
         value=[link['value'] for link in links],
         color=link_colors,
-        # color='blue'
     )
 ))
+sankey_fig.update_traces(textfont=dict(
+        family="Arial, sans-serif",
+        size=40,
+        color="black",
+    ))
+
+# Manually add annotations to place labels inside the nodes
+annotations = [
+    dict(
+        x=0.001, y=1.002,
+        text="akiec gt", showarrow=False, font=dict(size=25, color="white")
+    ),
+    dict(
+        x=0.5, y=1.005,
+        text="akiec h", showarrow=False, font=dict(size=25, color="white")
+    ),
+    dict(
+        x=1., y=1.002,
+        text="akiec nh", showarrow=False, font=dict(size=25, color="white")
+    ),
+    dict(
+        x=0.004, y=0.915,
+        text="bcc gt", showarrow=False, font=dict(size=25, color="black")
+    ),
+    dict(
+        x=0.5, y=0.92,
+        text="bcc h", showarrow=False, font=dict(size=25, color="black")
+    ),
+    dict(
+        x=0.994, y=0.917,
+        text="bcc nh", showarrow=False, font=dict(size=25, color="black")
+    ),
+    dict(
+        x=0.005, y=0.795,
+        text="bkl gt", showarrow=False, font=dict(size=25, color="black")
+    ),
+    dict(
+        x=0.5, y=0.785,
+        text="bkl h", showarrow=False, font=dict(size=25, color="black")
+    ),
+    dict(
+        x=0.993, y=0.79,
+        text="bkl nh", showarrow=False, font=dict(size=25, color="black")
+    ),
+    dict(
+        x=0.005, y=0.678,
+        text="df gt", showarrow=False, font=dict(size=25, color="black")
+    ),
+    dict(
+        x=0.5, y=0.644,
+        text="df h", showarrow=False, font=dict(size=23, color="black")
+    ),
+    dict(
+        x=0.99, y=0.655,
+        text="df nh", showarrow=False, font=dict(size=25, color="black")
+    ),
+    dict(
+        x=0.003, y=0.565,
+        text="mel gt", showarrow=False, font=dict(size=25, color="white")
+    ),
+    dict(
+        x=0.5, y=0.53,
+        text="mel h", showarrow=False, font=dict(size=23, color="white")
+    ),
+    dict(
+        x=0.994, y=0.545,
+        text="mel nh", showarrow=False, font=dict(size=25, color="white")
+    ),
+    dict(
+        x=0.005, y=0.26,
+        text="nv gt", showarrow=False, font=dict(size=25, color="black")
+    ),
+    dict(
+        x=0.5, y=0.24,
+        text="nv h", showarrow=False, font=dict(size=23, color="black")
+    ),
+    dict(
+        x=0.991, y=0.25,
+        text="nv nh", showarrow=False, font=dict(size=25, color="black")
+    ),
+    dict(
+        x=0.001, y=-0.002,
+        text="vasc gt", showarrow=False, font=dict(size=25, color="white")
+    ),
+    dict(
+        x=0.5, y=-0.002,
+        text="vasc h", showarrow=False, font=dict(size=23, color="white")
+    ),
+    dict(
+        x=0.999, y=-0.004,
+        text="vasc nh", showarrow=False, font=dict(size=25, color="white")
+    ),
+
+
+]
+
+# Add annotations to the figure
+sankey_fig.update_layout(annotations=annotations)
+
+
 
 # Show the figure
-sankey_fig.update_layout(title_text="Sankey Diagram of Classifications", font_size=50)
+sankey_fig.update_layout(title_text="Sankey Diagram (Ground Truth ↦ Hair ↦ No Hair)", font_size=35, title_x=0.5)
 sankey_fig.write_image('sankey_diagram.png', width=2400, height=1600)
 
 # %%
