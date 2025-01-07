@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
 import utils
 import logging
 from scipy.stats import chi2_contingency
@@ -23,24 +24,57 @@ with open(args.config_path) as file:
 seed = config['seed']
 np.random.seed(seed)
 
-metadata_path = config['dir']['new_metadata']
+to_analyze = 'test' # 'train' or 'test'
 
-df = pd.read_csv(metadata_path)
+if to_analyze == 'train':
+    metadata_path = config['dir']['new_metadata']
+    df = pd.read_csv(metadata_path)
+elif to_analyze == 'test':
+    metadata_path = config['dir']['new_metadata_test']
+    df = pd.read_csv(metadata_path)
+    df = df[df.columns[:-2]]
+    df = df[df['image_id'] != 'ISIC_0035068'] # it is not present in the test set
+
+title_suffix = 'train set' if to_analyze == 'train' else 'test set'
+
+
 cols =  ['hair', 'ruler_marks', 'bubbles', 'vignette', 'frame', 'other']
 df[cols] = df[cols].fillna(0)
 df[cols] = df[cols].astype(int)
+# aggregate the 'other' category with the 'frame' category
+df['other'] = df['frame'] | df['other']
+df.drop(columns=['frame'], inplace=True)
+cols =  ['hair', 'ruler_marks', 'bubbles', 'vignette', 'other']
 # %% VISUALIZATION
 counts = df.groupby('dx')[cols].agg(['sum', 'count'])
 counts.columns = ['_'.join(col) for col in counts.columns]
 
-fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+fig = plt.figure(figsize=(12, 18))
+gs = GridSpec(3, 2)
 
-for i, ax in enumerate(axes.flat):
+# Axes definitions
+axes = [
+    fig.add_subplot(gs[0, 0]),  # First row, first column
+    fig.add_subplot(gs[0, 1]),  # First row, second column
+    fig.add_subplot(gs[1, 0]),  # Second row, first column
+    fig.add_subplot(gs[1, 1]),  # Second row, second column
+    fig.add_subplot(gs[2, :]),  # Third row, spanning both columns
+]
+
+for i, ax in enumerate(axes):
     col = cols[i]
     percentage = counts[f'{col}_sum'] / counts[f'{col}_count'] * 100
     print(f"Percentage of occurrences by category for {col}:\n{round(percentage,1)}")
     order = ['nv', 'mel', 'bkl', 'bcc', 'akiec', 'vasc', 'df']
-    sns.barplot(x=counts.index.str.lower(), y=percentage, order=order, width=0.5, edgecolor='black', facecolor=(1, 1, 1, 0), ax=ax)
+    sns.barplot(
+        x=counts.index.str.lower(),
+        y=percentage,
+        order=order,
+        width=0.5,
+        edgecolor='black',
+        facecolor=(1, 1, 1, 0),
+        ax=ax
+    )
     ax.set_title(col, fontsize=14)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -53,8 +87,8 @@ for i, ax in enumerate(axes.flat):
     ax.set_ylabel('')
     ax.tick_params(axis='both', which='major', labelsize=12)
 
-plt.suptitle('Percentage of occurrences by category', fontsize=16)
-plt.tight_layout(rect=[0, 0, 1, 0.96])
+plt.suptitle(f'Percentage of occurrences by category in {title_suffix}', fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.96], h_pad=3.0)
 plt.show()
 
 
@@ -64,12 +98,15 @@ cols_to_test =  ['hair', 'ruler_marks', 'bubbles', 'vignette']
 
 def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
     contingency_table = pd.crosstab(df['dx'], df[test_column])
+    # make order = ['nv', 'mel', 'bkl', 'bcc', 'akiec', 'vasc', 'df']
+    contingency_table = contingency_table.reindex(['nv', 'mel', 'bkl', 'bcc', 'akiec', 'vasc', 'df'])
     chi2, p, dof, expected = chi2_contingency(contingency_table, correction=True)
 
     print(f"Chi-Squared Test for '{test_column}' Result:")
     print(f"Chi2 Statistic: {chi2}, p-value: {p}, Degrees of Freedom: {dof}")
     print(f"Expected Frequencies:\n{expected}")
-
+    effect_size = np.sqrt(chi2 / (len(df) * (min(contingency_table.shape) - 1)))
+    print(f"Cramer's V Effect Size: {effect_size:.4f}")
     if p < 0.05:
         combinations_of_classes = list(combinations(contingency_table.index, 2))
         p_values = []
@@ -109,7 +146,7 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
 
         # redundant row and col deleted
         plt.figure(figsize=(10, 8))
-        sns.heatmap(corrected_p_value_matrix, annot=True, fmt='.4f', cbar=False, 
+        sns.heatmap(corrected_p_value_matrix, annot=True, fmt='.4f', cbar=False,
                     cmap='gray', square=False,
                     xticklabels=contingency_table.index, yticklabels=contingency_table.index,
                     # mask=mask[1:, :-1], 
@@ -119,8 +156,7 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
         #             xticklabels=contingency_table.index[:-1], yticklabels=contingency_table.index[1:],
         #             # mask=mask[1:, :-1], 
         #             cbar_kws={'label': 'Corrected P-value'})
-
-        plt.title(f"Pairwise Comparison Bonferroni Corrected P-values for '{col}'")
+        plt.title(f"Pairwise Comparison Bonferroni Corrected P-values for '{col}' " + title_suffix)
         plt.xlabel("Class")
         plt.ylabel("Class")
         plt.xticks(rotation=45)
