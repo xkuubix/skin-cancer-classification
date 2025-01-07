@@ -8,7 +8,6 @@ import torch
 import numpy as np
 import albumentations as A
 from Dataset import HAM10000
-# from pytorch_tabnet.tab_network import TabNet
 from pytorch_tabnet.tab_network import TabNet
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import balanced_accuracy_score
@@ -101,7 +100,6 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     classes = np.unique(y_train)
     class_weights = compute_class_weight('balanced', classes=classes, y=y_train)
     class_weights = torch.from_numpy(class_weights).float()
-    # class_weights_dict = {cls: weight for cls, weight in zip(classes, class_weights)}
 
     input_dim = X_train[0].shape[0]
     output_dim = 7
@@ -128,12 +126,8 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     X_test = torch.from_numpy(X_test).float()
     y_test = torch.from_numpy(y_test).long()
 
-    # smote = SMOTE(random_state=seed)
-    # X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
-    # X_train = torch.from_numpy(X_train_resampled).float()
-    # y_train = torch.from_numpy(y_train_resampled).long()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=config['net_train']['lr'])
+    optimizer = torch.optim.SGD(model.parameters(), lr=config['net_train']['lr'])
     criterion = torch.nn.CrossEntropyLoss(class_weights)
 
     best_val_loss = float('inf')
