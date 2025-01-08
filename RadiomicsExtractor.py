@@ -89,11 +89,6 @@ class RadiomicsExtractor():
         else:
             pass
         if self.transforms:
-            if im.shape[0:2] != sg.shape[0:2]:
-                for tf in self.transforms:
-                    if isinstance(tf, A.Resize):
-                        im = tf(image=im)['image']
-                        sg = tf(image=sg)['image']
             transformed = self.transforms(image=im, mask=sg)
             im = transformed['image'].squeeze()
             sg = transformed['mask'].squeeze()
