@@ -44,15 +44,17 @@ def tabular_explanations(finfo, attributions, ax):
     sns.barplot(x=plot_scores, y=plot_features, palette=colors, ax=ax,
                 hue=plot_features,
                 legend=True,
-                dodge=False)
+                dodge=False,
+                gap=0
+                )
     handles = [plt.Line2D([0], [0], color=color, lw=4) for color in ['blue', 'green', 'red', 'gray']]
     labels = ['Blue', 'Green', 'Red', 'Grayscale']
-    ax.legend(handles, labels, title='Channel', loc='best')
+    ax.legend(handles, labels, title='Channel', loc='best', fontsize=12, title_fontsize=16)
     for i, feature in enumerate(plot_features):
         # ax.text(plot_scores[i], i, f' {feature}', va='center') # start outside right
         ax.text(0, i, f' {feature}', va='center',
                 color='white',  # Font color
-                fontsize=12,  # Font size
+                fontsize=16,  # Font size
                 path_effects=[
                 withStroke(linewidth=3, foreground='black')  # Outline effect
                 ]) # start inside bars
@@ -78,14 +80,14 @@ def plot_attr(data, attributions, pred, prob):
                                                  (1, '#ffffff')], N=2)
 
     # fig, ax = plt.subplots(1, 5, figsize=(18, 9))
-    fig = plt.figure(figsize=(12, 18))
+    fig = plt.figure(figsize=(18, 12))
     fig.subplots_adjust(wspace=0.05, hspace=0.05)
-    ax = [plt.subplot(3,2,1), plt.subplot(3,2,2), plt.subplot(3,2,3), plt.subplot(3,2,4),
-          plt.subplot(3,1,3)]
+    ax = [plt.subplot(2,3,1), plt.subplot(2,3,2), plt.subplot(2,3,4), plt.subplot(2,3,5),
+          plt.subplot(1,3,3)]
 
     _ = viz.visualize_image_attr(None, original_image,
                                  method="original_image",
-                                 title=f'Original Image (GT:{data["label_str"][0]})\nID:{id}',
+                                 title=f'Original Image ID:{id}',
                                  use_pyplot=False,
                                  plt_fig_axis=(fig, ax[0]))
     _ = viz.visualize_image_attr(None, processed_image,
@@ -127,6 +129,10 @@ def plot_attr(data, attributions, pred, prob):
     ax[4].tick_params(left=False, labelleft=False)
     ax[4].set_axisbelow(True)
     ax[4].grid(axis='x', linestyle='-', linewidth=1, zorder=0)
+
+    for a in ax:
+        a.title.set_fontsize(16)
+
     fig.tight_layout()
     plt.close()
     return fig
@@ -143,12 +149,12 @@ paths = ['model_fold_0_f667fabfa1c747bc85e49b1e0b7dfe3e',
          'model_fold_4_dc73e29eb99f4297bfb20d116f3a7e6a'
          ]
 # no hair
-# paths = ['model_fold_0_e337ad33562b4c61aaa956ef1f07befa',
-#          'model_fold_1_9dff589f89c743448e1405d58daf5c38',
-#          'model_fold_2_f58823fc62934ce7b8659ea4c85cbb59',
-#          'model_fold_3_45d4591cd68d453e8ddbbdd4b050dd3a',
-#          'model_fold_4_743f42ba09ce44ef8b8db3cfc533a485'
-#          ]
+paths = ['model_fold_0_e337ad33562b4c61aaa956ef1f07befa',
+         'model_fold_1_9dff589f89c743448e1405d58daf5c38',
+         'model_fold_2_f58823fc62934ce7b8659ea4c85cbb59',
+         'model_fold_3_45d4591cd68d453e8ddbbdd4b050dd3a',
+         'model_fold_4_743f42ba09ce44ef8b8db3cfc533a485'
+         ]
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.ERROR)
@@ -261,8 +267,8 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
             pred = next((k for k, v in mapping_handler.items() if v == pred), None)
             fig = plot_attr(data, attributions, pred, prob)
             id = data['img_path'][0].split('/')[-1].split('.')[0]
-            # path = config['dir']['results'] + f'no_hair/{id}_attr.png'
-            path = config['dir']['results'] + f'/{id}_attr.png'
+            path = config['dir']['results'] + f'no_hair/{id}_attr.png'
+            # path = config['dir']['results'] + f'hair/{id}_attr.png'
             fig.savefig(path)
             i += 1
             print(f'{i}/1511')
