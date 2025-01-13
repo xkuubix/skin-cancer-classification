@@ -34,29 +34,33 @@ def tabular_explanations(finfo, attributions, ax):
     colors = []
     for feature in plot_features:
         if feature.endswith('_b'):
-            colors.append('blue')
+            colors.append('cornflowerblue')
         elif feature.endswith('_g'):
-            colors.append('green')
+            colors.append('lawngreen')
         elif feature.endswith('_r'):
-            colors.append('red')
+            colors.append('orangered')
         else:
-            colors.append('gray')
+            colors.append('darkgray')
     sns.barplot(x=plot_scores, y=plot_features, palette=colors, ax=ax,
                 hue=plot_features,
                 legend=True,
                 dodge=False,
                 gap=0
                 )
-    handles = [plt.Line2D([0], [0], color=color, lw=4) for color in ['blue', 'green', 'red', 'gray']]
-    labels = ['Blue', 'Green', 'Red', 'Grayscale']
+    handles = [plt.Rectangle((0, 0), 1, 1, color=color) for color in ['darkgray', 'orangered', 'lawngreen', 'cornflowerblue']]
+    labels = ['Grayscale', 'Red', 'Green', 'Blue']
     ax.legend(handles, labels, title='Channel', loc='best', fontsize=12, title_fontsize=16)
     for i, feature in enumerate(plot_features):
         # ax.text(plot_scores[i], i, f' {feature}', va='center') # start outside right
+        if feature.endswith('_b'):
+            color = 'black'
+        else:
+            color = 'black'
         ax.text(0, i, f' {feature}', va='center',
-                color='white',  # Font color
+                color=color,  # Font color
                 fontsize=16,  # Font size
                 path_effects=[
-                withStroke(linewidth=3, foreground='black')  # Outline effect
+                withStroke(linewidth=0, foreground='black')  # Outline effect
                 ]) # start inside bars
         plt.gca().spines['top'].set_visible(False)
         plt.gca().spines['right'].set_visible(False)
@@ -71,10 +75,14 @@ def plot_attr(data, attributions, pred, prob):
     processed_image = image[0].cpu().numpy().transpose(1, 2, 0)
     attr = attributions[0][0].cpu().numpy().transpose(1, 2, 0)
     id = data['img_path'][0].split('/')[-1].split('.')[0]
-    default_cmap = LinearSegmentedColormap.from_list('custom red',
-                                                    [(0, '#000000'),
-                                                     (.5, '#ff0000'),
-                                                    (1, '#ffff00')], N=256)
+    cmap_pos = LinearSegmentedColormap.from_list('custom red',
+                                                 [(0, '#000000'),
+                                                  (.5, '#ff0000'),
+                                                 (1, '#ffff00')], N=256)
+    cmap_neg = LinearSegmentedColormap.from_list('custom red',
+                                                 [(0, '#000000'),
+                                                  (.5, '#0000ff'),
+                                                 (1, '#0000ff')], N=256)
     seg_cmap = LinearSegmentedColormap.from_list('custom bin',
                                                  [(0, '#000000'),
                                                  (1, '#ffffff')], N=2)
@@ -87,14 +95,14 @@ def plot_attr(data, attributions, pred, prob):
 
     _ = viz.visualize_image_attr(None, original_image,
                                  method="original_image",
-                                 title=f'Original Image ID:{id}',
+                                 title=f'Original Image',
                                  use_pyplot=False,
                                  plt_fig_axis=(fig, ax[0]))
-    _ = viz.visualize_image_attr(None, processed_image,
-                                 method="original_image",
-                                 title='Processed Image',
-                                 use_pyplot=False,
-                                 plt_fig_axis=(fig, ax[1]))
+    # _ = viz.visualize_image_attr(None, processed_image,
+    #                              method="original_image",
+    #                              title='Processed Image',
+    #                              use_pyplot=False,
+    #                              plt_fig_axis=(fig, ax[1]))
     ax[2].imshow(segmentation_image, cmap=seg_cmap)
     ax[2].set_title('Segmentation Mask')
     ax[2].set_xticks([])
@@ -106,13 +114,21 @@ def plot_attr(data, attributions, pred, prob):
     ax[2].spines['bottom'].set_visible(True)
     ax[2].spines['left'].set_visible(True)
     ax[2].spines['right'].set_visible(True)
+    _ = viz.visualize_image_attr(attr,
+                                 method='heat_map',
+                                 cmap=cmap_pos,
+                                 show_colorbar=True,
+                                 sign='positive',
+                                 title=f'Positive attributions',
+                                 use_pyplot=False,
+                                 plt_fig_axis=(fig, ax[1]))
 
     _ = viz.visualize_image_attr(attr,
                                  method='heat_map',
-                                 cmap=default_cmap,
+                                 cmap=cmap_neg,
                                  show_colorbar=True,
-                                 sign='positive',
-                                 title=f'Attributions (pred:{pred.lower()}, p:{prob})',
+                                 sign='negative',
+                                 title=f'Negative attributions',
                                  use_pyplot=False,
                                  plt_fig_axis=(fig, ax[3]))
     
@@ -133,6 +149,7 @@ def plot_attr(data, attributions, pred, prob):
     for a in ax:
         a.title.set_fontsize(16)
 
+    fig.suptitle(f'ID: {id} | Ground-Truth: {data["label_str"][0]} | Prediction: {pred.lower()}, p={prob}', fontsize=20)
     fig.tight_layout()
     plt.close()
     return fig
