@@ -69,7 +69,9 @@ def tabular_explanations(finfo, attributions, ax):
 
 def plot_attr(data, attributions, pred, prob):
     path = data['img_path']
-    original_image = np.array(Image.open(path[0]))
+    im = Image.open(path[0])
+    # im = im.resize((224, 224))
+    original_image = np.array(im)
     path = data['seg_path']
     segmentation_image = np.array(Image.open(path[0]))
     processed_image = image[0].cpu().numpy().transpose(1, 2, 0)
@@ -98,11 +100,11 @@ def plot_attr(data, attributions, pred, prob):
                                  title=f'Original Image',
                                  use_pyplot=False,
                                  plt_fig_axis=(fig, ax[0]))
-    # _ = viz.visualize_image_attr(None, processed_image,
-    #                              method="original_image",
-    #                              title='Processed Image',
-    #                              use_pyplot=False,
-    #                              plt_fig_axis=(fig, ax[1]))
+    _ = viz.visualize_image_attr(None, processed_image,
+                                 method="original_image",
+                                 title='Processed Image',
+                                 use_pyplot=False,
+                                 plt_fig_axis=(fig, ax[1]))
     ax[2].imshow(segmentation_image, cmap=seg_cmap)
     ax[2].set_title('Segmentation Mask')
     ax[2].set_xticks([])
@@ -116,19 +118,11 @@ def plot_attr(data, attributions, pred, prob):
     ax[2].spines['right'].set_visible(True)
     _ = viz.visualize_image_attr(attr,
                                  method='heat_map',
-                                 cmap=cmap_pos,
                                  show_colorbar=True,
                                  sign='positive',
-                                 title=f'Positive attributions',
-                                 use_pyplot=False,
-                                 plt_fig_axis=(fig, ax[1]))
-
-    _ = viz.visualize_image_attr(attr,
-                                 method='heat_map',
-                                 cmap=cmap_neg,
-                                 show_colorbar=True,
-                                 sign='negative',
-                                 title=f'Negative attributions',
+                                 outlier_perc=10,
+                                 title=f'Attribution Map',
+                                 cmap=cmap_pos,
                                  use_pyplot=False,
                                  plt_fig_axis=(fig, ax[3]))
     
@@ -166,12 +160,12 @@ paths = ['model_fold_0_f667fabfa1c747bc85e49b1e0b7dfe3e',
          'model_fold_4_dc73e29eb99f4297bfb20d116f3a7e6a'
          ]
 # no hair
-paths = ['model_fold_0_e337ad33562b4c61aaa956ef1f07befa',
-         'model_fold_1_9dff589f89c743448e1405d58daf5c38',
-         'model_fold_2_f58823fc62934ce7b8659ea4c85cbb59',
-         'model_fold_3_45d4591cd68d453e8ddbbdd4b050dd3a',
-         'model_fold_4_743f42ba09ce44ef8b8db3cfc533a485'
-         ]
+# paths = ['model_fold_0_e337ad33562b4c61aaa956ef1f07befa',
+#          'model_fold_1_9dff589f89c743448e1405d58daf5c38',
+#          'model_fold_2_f58823fc62934ce7b8659ea4c85cbb59',
+#          'model_fold_3_45d4591cd68d453e8ddbbdd4b050dd3a',
+#          'model_fold_4_743f42ba09ce44ef8b8db3cfc533a485'
+#          ]
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.ERROR)
@@ -258,40 +252,45 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     model.to(device=device)
     model.eval()
     explainer = IntegratedGradients(model)
-    with torch.no_grad():
-        i = 0
-        i_max = 5
-        for data in test_dl:
-            if config['dataset']['mode'] in ['images', 'hybrid']:  
-                image = data['image'].to(device)
-            if config['dataset']['mode'] in ['radiomics', 'hybrid']:
-                radiomic_features = data['features'].to(device)
-            else:
-                radiomic_features = None
-            target_idx = data['label'].to(device)
-            image_baseline = torch.rand(image.size()).to(device)
-            # image_baseline = torch.zeros_like(image).to(device)
-            tabular_baseline = torch.zeros_like(radiomic_features).to(device)
-            attributions = explainer.attribute((image, radiomic_features),
-                                               baselines=(image_baseline, tabular_baseline),
-                                               target=target_idx,
-                                               n_steps=200
-                                               )
-            output = explainer.forward_func(image, radiomic_features)
-            prob = torch.softmax(output, dim=1)
-            pred = output.argmax(dim=1).item()
-            prob = prob.reshape(-1)[pred].item().__round__(2)
-            pred = next((k for k, v in mapping_handler.items() if v == pred), None)
-            fig = plot_attr(data, attributions, pred, prob)
-            id = data['img_path'][0].split('/')[-1].split('.')[0]
-            path = config['dir']['results'] + f'no_hair/{id}_attr.png'
-            # path = config['dir']['results'] + f'hair/{id}_attr.png'
-            fig.savefig(path)
-            i += 1
-            print(f'{i}/1511')
-            # if i >= i_max:
-            #     break
-            # break
+    # with torch.no_grad():
+    i = 0
+    i_max = 10
+    for data in test_dl:
+        if config['dataset']['mode'] in ['images', 'hybrid']:  
+            image = data['image'].to(device)
+        if config['dataset']['mode'] in ['radiomics', 'hybrid']:
+            radiomic_features = data['features'].to(device)
+        else:
+            radiomic_features = None
+        # target_idx = data['label'].to(device)
+        image_baseline = torch.rand(image.size()).to(device)
+        # image_baseline = torch.zeros_like(image).to(device)
+        tabular_baseline = torch.zeros_like(radiomic_features).to(device)
+
+        output = explainer.forward_func(image, radiomic_features).data.cpu()
+        pred = output.argmax(dim=1).item()
+        # print(f'Prediction: {pred}')
+
+        attributions = explainer.attribute((image, radiomic_features),
+                                            baselines=(image_baseline, tabular_baseline),
+                                            target=pred,
+                                            n_steps=200
+                                            )
+        prob = torch.softmax(output, dim=1)
+        prob = prob.reshape(-1)[pred].item().__round__(2)
+        pred = next((k for k, v in mapping_handler.items() if v == pred), None)
+        fig = plot_attr(data, attributions, pred, prob)
+        id = data['img_path'][0].split('/')[-1].split('.')[0]
+        # path = config['dir']['results'] + f'no_hair/{id}_attr.png'
+        path = config['dir']['results'] + f'hair/{id}_attr.png'
+        fig.savefig(path)
+        i += 1
+        print(f'{i}/1511')
+        for param in explainer.forward_func.parameters():
+            param.grad = None
+        # if i >= i_max:
+        #     break
+        # break
     break # only one fold for now
 
 # %% 
