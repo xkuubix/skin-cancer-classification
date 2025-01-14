@@ -182,13 +182,13 @@ if not load:
     # Fold 1:
     # hair Average Entropy across all samples: 0.2902
     # no-hair Average Entropy across all samples: 0.3177
-    save_path = config['dir']['results'] + 'fold_results_no_hair.pkl'
+    save_path = config['dir']['results'] + 'hair/fold_results_no_hair.pkl'
     with open(save_path, 'wb') as handle:
         pickle.dump(fold_results, handle)
         logger.info(f"Saved fold results to {config['dir']['results']}fold_results.pkl")
 elif load:
-    load_path_1 = config['dir']['results'] + 'fold_results_hair.pkl'
-    load_path_2 = config['dir']['results'] + 'fold_results_no_hair.pkl'
+    load_path_1 = config['dir']['results'] + 'hair/fold_results_hair.pkl'
+    load_path_2 = config['dir']['results'] + 'no_hair/fold_results_no_hair.pkl'
     with open(load_path_1, 'rb') as handle:
         hair_results = pickle.load(handle)
         logger.info(f"Loaded fold results from {config['dir']['results']}fold_results.pkl")
@@ -229,14 +229,13 @@ melted_df['predicted_class'] = melted_df.apply(
     lambda row: row['predicted_label_hair'] if row['condition'] == 'entropy_hair' else row['predicted_label_no_hair'], axis=1)
 
 # Plot the boxplot for both hair and no hair predictions
-plt.figure(figsize=(12, 8))
-sns.boxplot(x='predicted_class', y='entropy', hue='condition', data=melted_df,
-            showfliers=False)
-sns.stripplot(x='predicted_class', y='entropy', hue='condition', data=melted_df,
-                dodge=True, alpha=0.8, zorder=2, color='black')
+plt.figure(figsize=(8, 6))
+sns.boxplot(x='predicted_class', y='entropy', hue='condition', data=melted_df)
+# sns.stripplot(x='predicted_class', y='entropy', hue='condition', data=melted_df,
+#                 dodge=True, alpha=0.8, zorder=2, color='black')
 plt.xlabel('Predicted Class')
 plt.ylabel('Entropy')
-plt.legend(title='condition')
+plt.legend(title='condition', loc='best')
 plt.title('Entropy Distribution by Predicted Class (with and without hair)', fontsize=14)
 # plt.title('Entropy Distribution by Ground Truth (with and without hair)', fontsize=14)
 plt.gca().spines['top'].set_visible(False)
@@ -253,11 +252,6 @@ handles, labels = plt.gca().get_legend_handles_labels()
 plt.legend(handles[:2], ['Hair', 'No Hair'], loc='upper right')
 plt.tight_layout(rect=[0, 0, 1, 0.96], h_pad=3.0)
 plt.show()
-
-
-
-
-
 # %%
 hair_predictions = np.argmax(hair_results[0], axis=1) + 7
 no_hair_predictions = np.argmax(no_hair_results[0], axis=1) + 14
