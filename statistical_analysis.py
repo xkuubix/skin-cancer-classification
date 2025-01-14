@@ -49,16 +49,15 @@ cols =  ['hair', 'ruler_marks', 'bubbles', 'vignette', 'other']
 counts = df.groupby('dx')[cols].agg(['sum', 'count'])
 counts.columns = ['_'.join(col) for col in counts.columns]
 
-fig = plt.figure(figsize=(12, 18))
-gs = GridSpec(3, 2)
+fig = plt.figure(figsize=(18, 6))
+gs = GridSpec(1, 4)
 
 # Axes definitions
 axes = [
-    fig.add_subplot(gs[0, 0]),  # First row, first column
-    fig.add_subplot(gs[0, 1]),  # First row, second column
-    fig.add_subplot(gs[1, 0]),  # Second row, first column
-    fig.add_subplot(gs[1, 1]),  # Second row, second column
-    fig.add_subplot(gs[2, :]),  # Third row, spanning both columns
+    fig.add_subplot(gs[0, 0]),
+    fig.add_subplot(gs[0, 1]),
+    fig.add_subplot(gs[0, 2]),
+    fig.add_subplot(gs[0, 3]),
 ]
 
 for i, ax in enumerate(axes):
@@ -75,7 +74,27 @@ for i, ax in enumerate(axes):
         facecolor=(1, 1, 1, 0),
         ax=ax
     )
-    ax.set_title(col, fontsize=14)
+    if col == 'hair':
+        title = 'Hair'
+    elif col == 'ruler_marks':
+        title = 'Ruler Marks'
+    elif col == 'bubbles':
+        title = 'Interface Fluid'
+    elif col == 'vignette':
+        title = 'Vignette'
+    if col == 'hair':
+        title = 'Hair'
+        ax.set_ylim(0, 90)
+    elif col == 'ruler_marks':
+        title = 'Ruler Marks'
+        ax.set_ylim(0, 45)
+    elif col == 'bubbles':
+        title = 'Interface Fluid'
+        ax.set_ylim(0, 35)
+    elif col == 'vignette':
+        title = 'Vignette'
+        ax.set_ylim(0, 30)
+    ax.set_title(title, fontsize=14)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)
@@ -87,7 +106,7 @@ for i, ax in enumerate(axes):
     ax.set_ylabel('')
     ax.tick_params(axis='both', which='major', labelsize=12)
 
-plt.suptitle(f'Percentage of occurrences by category in {title_suffix}', fontsize=16)
+plt.suptitle(f'Occurrence by category in {title_suffix} [%]', fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.96], h_pad=3.0)
 plt.show()
 
@@ -145,8 +164,8 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
         mask = np.triu(np.ones_like(corrected_p_value_matrix, dtype=bool))
 
         # redundant row and col deleted
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(corrected_p_value_matrix, annot=True, fmt='.4f', cbar=False,
+        plt.figure(figsize=(8, 8))
+        sns.heatmap(corrected_p_value_matrix, annot=True, fmt='.3f', cbar=False,
                     cmap='gray', square=False,
                     xticklabels=contingency_table.index, yticklabels=contingency_table.index,
                     # mask=mask[1:, :-1], 
@@ -156,12 +175,21 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
         #             xticklabels=contingency_table.index[:-1], yticklabels=contingency_table.index[1:],
         #             # mask=mask[1:, :-1], 
         #             cbar_kws={'label': 'Corrected P-value'})
-        plt.title(f"Pairwise Comparison Bonferroni Corrected P-values for '{col}' " + title_suffix)
+        if col == 'hair':
+            title = 'Hair'
+        elif col == 'ruler_marks':
+            title = 'Ruler Marks'
+        elif col == 'bubbles':
+            title = 'Interface Fluid'
+        elif col == 'vignette':
+            title = 'Vignette'
+        plt.title(f"Pairwise Comparison Bonferroni Corrected P-values for '{title}' " + title_suffix)
         plt.xlabel("Class")
         plt.ylabel("Class")
         plt.xticks(rotation=45)
         plt.yticks(rotation=0)
         plt.tick_params(axis='both', which='both', length=0)
+        plt.tight_layout
         plt.show()
 
     else:
