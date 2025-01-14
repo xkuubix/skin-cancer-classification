@@ -231,8 +231,6 @@ melted_df['predicted_class'] = melted_df.apply(
 # Plot the boxplot for both hair and no hair predictions
 plt.figure(figsize=(8, 6))
 sns.boxplot(x='predicted_class', y='entropy', hue='condition', data=melted_df)
-# sns.stripplot(x='predicted_class', y='entropy', hue='condition', data=melted_df,
-#                 dodge=True, alpha=0.8, zorder=2, color='black')
 plt.xlabel('Predicted Class')
 plt.ylabel('Entropy')
 plt.legend(title='condition', loc='best')
