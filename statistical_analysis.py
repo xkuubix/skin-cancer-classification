@@ -164,8 +164,8 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
         mask = np.triu(np.ones_like(corrected_p_value_matrix, dtype=bool))
 
         # redundant row and col deleted
-        plt.figure(figsize=(8, 8))
-        sns.heatmap(corrected_p_value_matrix, annot=True, fmt='.3f', cbar=False,
+        plt.figure(figsize=(6, 6))
+        sns.heatmap(corrected_p_value_matrix, annot=True, fmt='.2f', cbar=False,
                     cmap='gray', square=True,
                     annot_kws={'size': 13},
                     cbar_kws={'label': 'Corrected P-value'},
