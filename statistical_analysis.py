@@ -166,10 +166,14 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
         # redundant row and col deleted
         plt.figure(figsize=(8, 8))
         sns.heatmap(corrected_p_value_matrix, annot=True, fmt='.3f', cbar=False,
-                    cmap='gray', square=False,
+                    cmap='gray', square=True,
+                    annot_kws={'size': 13},
+                    cbar_kws={'label': 'Corrected P-value'},
+                    linewidths=.1,
+                    linecolor='black',
                     xticklabels=contingency_table.index, yticklabels=contingency_table.index,
-                    # mask=mask[1:, :-1], 
-                    cbar_kws={'label': 'Corrected P-value'})
+                    # mask=mask[1:, :-1],
+                    )
         # sns.heatmap(corrected_p_value_matrix[1:, :-1], annot=True, fmt='.4f', cbar=False, 
         #             cmap='gray', square=True,
         #             xticklabels=contingency_table.index[:-1], yticklabels=contingency_table.index[1:],
@@ -183,13 +187,13 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
             title = 'Interface Fluid'
         elif col == 'vignette':
             title = 'Vignette'
-        plt.title(f"Pairwise Comparison Bonferroni Corrected P-values for '{title}' " + title_suffix)
-        plt.xlabel("Class")
-        plt.ylabel("Class")
-        plt.xticks(rotation=45)
-        plt.yticks(rotation=0)
+        plt.title(f"{title} in " + title_suffix, fontsize=14)
+        plt.xlabel("Class", fontsize=14)
+        plt.ylabel("Class", fontsize=14)
+        plt.xticks(rotation=0, fontsize=14)
+        plt.yticks(rotation=0, fontsize=14)
         plt.tick_params(axis='both', which='both', length=0)
-        plt.tight_layout
+        # plt.tight_layout()
         plt.show()
 
     else:
