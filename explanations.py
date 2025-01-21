@@ -49,7 +49,7 @@ def tabular_explanations(finfo, attributions, ax):
                 )
     handles = [plt.Rectangle((0, 0), 1, 1, color=color) for color in ['darkgray', 'orangered', 'lawngreen', 'cornflowerblue']]
     labels = ['Grayscale', 'Red', 'Green', 'Blue']
-    ax.legend(handles, labels, title='Channel', loc='best', fontsize=12, title_fontsize=16)
+    ax.legend(handles, labels, title='Channel', loc='best', fontsize=16, title_fontsize=18)
     for i, feature in enumerate(plot_features):
         # ax.text(plot_scores[i], i, f' {feature}', va='center') # start outside right
         if feature.endswith('_b'):
@@ -58,7 +58,7 @@ def tabular_explanations(finfo, attributions, ax):
             color = 'black'
         ax.text(0, i, f' {feature}', va='center',
                 color=color,  # Font color
-                fontsize=16,  # Font size
+                fontsize=13,  # Font size
                 path_effects=[
                 withStroke(linewidth=0, foreground='black')  # Outline effect
                 ]) # start inside bars
@@ -67,7 +67,7 @@ def tabular_explanations(finfo, attributions, ax):
         plt.gca().spines['left'].set_visible(False)
         plt.gca().spines['bottom'].set_visible(False)
 
-def plot_attr(data, attributions, pred, prob):
+def plot_attr(data, attributions, pred, prob, finfo):
     path = data['img_path']
     im = Image.open(path[0])
     # im = im.resize((224, 224))
@@ -91,7 +91,7 @@ def plot_attr(data, attributions, pred, prob):
 
     # fig, ax = plt.subplots(1, 5, figsize=(18, 9))
     fig = plt.figure(figsize=(18, 12))
-    fig.subplots_adjust(wspace=0.05, hspace=0.05)
+    fig.subplots_adjust(wspace=0.0, hspace=0.0)
     ax = [plt.subplot(2,3,1), plt.subplot(2,3,2), plt.subplot(2,3,4), plt.subplot(2,3,5),
           plt.subplot(1,3,3)]
 
@@ -124,11 +124,11 @@ def plot_attr(data, attributions, pred, prob):
                                  title=f'Attribution Map',
                                  cmap=cmap_pos,
                                  use_pyplot=False,
-                                 plt_fig_axis=(fig, ax[3]))
-    
+                                 plt_fig_axis=(fig, ax[3]),
+                                 )
     tabular_explanations(finfo, attributions, ax[4])
     ax[4].set_title(f'Top {10} Important Radiomics')
-    ax[4].set_xlabel('Importance Score')
+    ax[4].set_xlabel('Importance Score', fontsize=14)
     for spine in ax[2].spines.values():
         spine.set_color('black')
         spine.set_linewidth(1)
@@ -149,7 +149,7 @@ def plot_attr(data, attributions, pred, prob):
     return fig
 
 # dev
-# fig = plot_attr(data, attributions, pred, prob)
+# fig = plot_attr(data, attributions, pred, prob, finfo)
 
 # %%
 # with hair
@@ -254,7 +254,7 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
     explainer = IntegratedGradients(model)
     # with torch.no_grad():
     i = 0
-    i_max = 10
+    i_max = 5
     for data in test_dl:
         if config['dataset']['mode'] in ['images', 'hybrid']:  
             image = data['image'].to(device)
@@ -279,7 +279,7 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
         prob = torch.softmax(output, dim=1)
         prob = prob.reshape(-1)[pred].item().__round__(2)
         pred = next((k for k, v in mapping_handler.items() if v == pred), None)
-        fig = plot_attr(data, attributions, pred, prob)
+        fig = plot_attr(data, attributions, pred, prob, finfo)
         id = data['img_path'][0].split('/')[-1].split('.')[0]
         # path = config['dir']['results'] + f'no_hair/{id}_attr.png'
         path = config['dir']['results'] + f'hair/{id}_attr.png'
