@@ -249,6 +249,7 @@ plt.gca().tick_params(axis='both', which='major', labelsize=12)
 handles, labels = plt.gca().get_legend_handles_labels()
 plt.legend(handles[:2], ['Hair', 'No Hair'], loc='upper right')
 plt.tight_layout(rect=[0, 0, 1, 0.96], h_pad=3.0)
+plt.savefig('entropy_distribution.png', dpi=300)
 plt.show()
 # %%
 hair_predictions = np.argmax(hair_results[0], axis=1) + 7
@@ -430,15 +431,8 @@ annotations = [
 
 
 ]
-
-# Add annotations to the figure
 sankey_fig.update_layout(annotations=annotations)
-
-
-
-# Show the figure
 sankey_fig.update_layout(title_text="Sankey Diagram (Ground Truth ↦ Hair ↦ No Hair)", font_size=35, title_x=0.5)
 sankey_fig.write_image('sankey_diagram.png', width=2400, height=1600)
-
 # %%
 
