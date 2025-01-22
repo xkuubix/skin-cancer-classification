@@ -135,14 +135,14 @@ setting: #----------------------------------------------------------------------
 imageType: #---------------------------------------------------------------------------------------------------------
            # [None] values are not allowed, '{}' is interpreted as an empty dictionary
   Original: {}          # No filter applied
-  Wavelet: {}           # Wavelet filtering
-  LoG: {}               # Laplacian of Gaussian filter
-  Square: {}            # Takes the square of the image intensities and linearly scales them back to the original range.
-  SquareRoot: {}        # Takes the square root of the absolute image intensities and scales them back to original range.
-  Logarithm: {}         # Takes the logarithm of the absolute intensity + 1.
-  Exponential: {}       # Takes the the exponential, where filtered intensity is e^(absolute intensity).
-  Gradient: {}          # Returns the magnitude of the local gradient.
-  LBP2D: {}             # Computes the Local Binary Pattern in a by-slice operation (2D).
+  # Wavelet: {}           # Wavelet filtering
+  # LoG: {}               # Laplacian of Gaussian filter
+  # Square: {}            # Takes the square of the image intensities and linearly scales them back to the original range.
+  # SquareRoot: {}        # Takes the square root of the absolute image intensities and scales them back to original range.
+  # Logarithm: {}         # Takes the logarithm of the absolute intensity + 1.
+  # Exponential: {}       # Takes the the exponential, where filtered intensity is e^(absolute intensity).
+  # Gradient: {}          # Returns the magnitude of the local gradient.
+  # LBP2D: {}             # Computes the Local Binary Pattern in a by-slice operation (2D).
   # LBP3D: {}             # Computes the Local Binary Pattern in 3D using spherical harmonics.
 
 
