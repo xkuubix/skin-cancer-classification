@@ -24,7 +24,7 @@ with open(args.config_path) as file:
 seed = config['seed']
 np.random.seed(seed)
 
-to_analyze = 'test' # 'train' or 'test'
+to_analyze = 'train' # 'train' or 'test'
 
 if to_analyze == 'train':
     metadata_path = config['dir']['new_metadata']
@@ -109,7 +109,7 @@ for i, ax in enumerate(axes):
 plt.suptitle(f'Occurrence by category in {title_suffix} [%]', fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.96], h_pad=3.0)
 plt.show()
-
+fig.savefig(f'./figures/occurrence_by_category_{title_suffix}.png', dpi=600)
 
 # %% STATISTICAL ANALYSIS
 # cols =  ['hair', 'ruler_marks', 'bubbles', 'vignette', 'frame', 'other']
@@ -119,8 +119,9 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
     contingency_table = pd.crosstab(df['dx'], df[test_column])
     # make order = ['nv', 'mel', 'bkl', 'bcc', 'akiec', 'vasc', 'df']
     contingency_table = contingency_table.reindex(['nv', 'mel', 'bkl', 'bcc', 'akiec', 'vasc', 'df'])
+    print(contingency_table)
     chi2, p, dof, expected = chi2_contingency(contingency_table, correction=True)
-
+    print(dof)
     print(f"Chi-Squared Test for '{test_column}' Result:")
     print(f"Chi2 Statistic: {chi2}, p-value: {p}, Degrees of Freedom: {dof}")
     print(f"Expected Frequencies:\n{expected}")
@@ -164,12 +165,12 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
         mask = np.triu(np.ones_like(corrected_p_value_matrix, dtype=bool))
 
         # redundant row and col deleted
-        plt.figure(figsize=(6, 6))
+        fig = plt.figure(figsize=(8, 8))
         sns.heatmap(corrected_p_value_matrix, annot=True, fmt='.2f', cbar=False,
                     cmap='gray', square=True,
-                    annot_kws={'size': 13},
+                    annot_kws={'size': 16},
                     cbar_kws={'label': 'Corrected P-value'},
-                    linewidths=.1,
+                    linewidths=.5,
                     linecolor='black',
                     xticklabels=contingency_table.index, yticklabels=contingency_table.index,
                     # mask=mask[1:, :-1],
@@ -187,14 +188,15 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
             title = 'Interface Fluid'
         elif col == 'vignette':
             title = 'Vignette'
-        plt.title(f"{title} in " + title_suffix, fontsize=14)
-        plt.xlabel("Class", fontsize=14)
-        plt.ylabel("Class", fontsize=14)
-        plt.xticks(rotation=0, fontsize=14)
-        plt.yticks(rotation=0, fontsize=14)
+        plt.title(f"{title} in " + title_suffix, fontsize=16)
+        # plt.xlabel("Class", fontsize=14)
+        # plt.ylabel("Class", fontsize=14)
+        plt.xticks(rotation=0, fontsize=16)
+        plt.yticks(rotation=0, fontsize=16)
         plt.tick_params(axis='both', which='both', length=0)
-        # plt.tight_layout()
+        plt.tight_layout()
         plt.show()
+        fig.savefig(f'./figures/{test_column}_post_hoc_{title_suffix}.png', pad_inches=0, dpi=600)
 
     else:
         print(f"\nNo significant difference found in the initial Chi-Squared test for '{test_column}'.")
