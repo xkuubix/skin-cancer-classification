@@ -24,7 +24,7 @@ with open(args.config_path) as file:
 seed = config['seed']
 np.random.seed(seed)
 
-to_analyze = 'train' # 'train' or 'test'
+to_analyze = 'test' # 'train' or 'test'
 
 if to_analyze == 'train':
     metadata_path = config['dir']['new_metadata']
@@ -109,7 +109,7 @@ for i, ax in enumerate(axes):
 plt.suptitle(f'Occurrence by category in {title_suffix} [%]', fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.96], h_pad=3.0)
 plt.show()
-fig.savefig(f'./figures/occurrence_by_category_{title_suffix}.png', dpi=600)
+fig.savefig(f'./figures/occurrence_by_category_{title_suffix}.eps', format='eps')
 
 # %% STATISTICAL ANALYSIS
 # cols =  ['hair', 'ruler_marks', 'bubbles', 'vignette', 'frame', 'other']
