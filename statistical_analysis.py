@@ -13,6 +13,8 @@ import statsmodels.stats.multitest as smm
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.ERROR)
 
+plt.rcParams['text.usetex'] = True
+plt.rcParams['font.family'] = 'Gulliver'
 
 # MAKE PARSER AND LOAD PARAMS FROM CONFIG FILE--------------------------------
 parser = utils.get_args_parser('config.yml')
@@ -24,7 +26,7 @@ with open(args.config_path) as file:
 seed = config['seed']
 np.random.seed(seed)
 
-to_analyze = 'test' # 'train' or 'test'
+to_analyze = 'train' # 'train' or 'test'
 
 if to_analyze == 'train':
     metadata_path = config['dir']['new_metadata']
@@ -203,7 +205,7 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
         plt.tick_params(axis='both', which='both', length=0)
         plt.tight_layout()
         plt.show()
-        fig.savefig(f'./figures2/{test_column}_post_hoc_{fname_suffix}.eps', pad_inches=0)
+        fig.savefig(f'./figures2/{test_column}_post_hoc_{fname_suffix}.png', pad_inches=0, dpi=600)
 
     else:
         print(f"\nNo significant difference found in the initial Chi-Squared test for '{test_column}'.")
