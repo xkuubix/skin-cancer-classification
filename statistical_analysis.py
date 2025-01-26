@@ -10,9 +10,9 @@ import logging
 from scipy.stats import chi2_contingency
 from itertools import combinations
 import statsmodels.stats.multitest as smm
-
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.ERROR)
+
 
 # MAKE PARSER AND LOAD PARAMS FROM CONFIG FILE--------------------------------
 parser = utils.get_args_parser('config.yml')
@@ -106,10 +106,10 @@ for i, ax in enumerate(axes):
     ax.set_ylabel('')
     ax.tick_params(axis='both', which='major', labelsize=12)
 
-plt.suptitle(f'Occurrence by category in {title_suffix} [%]', fontsize=16)
+# plt.suptitle(f'Occurrence by category in {title_suffix} [%]', fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.96], h_pad=3.0)
 plt.show()
-fig.savefig(f'./figures/occurrence_by_category_{title_suffix}.eps', format='eps')
+fig.savefig(f'./figures2/occurrence_by_category_{title_suffix}.eps', format='eps')
 
 # %% STATISTICAL ANALYSIS
 # cols =  ['hair', 'ruler_marks', 'bubbles', 'vignette', 'frame', 'other']
@@ -165,14 +165,16 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
         mask = np.triu(np.ones_like(corrected_p_value_matrix, dtype=bool))
 
         # redundant row and col deleted
-        fig = plt.figure(figsize=(8, 8))
+        # fig = plt.figure(figsize=(6, 6))
+        fig, ax = plt.subplots(figsize=(6, 6))
         sns.heatmap(corrected_p_value_matrix, annot=True, fmt='.2f', cbar=False,
                     cmap='gray', square=True,
-                    annot_kws={'size': 16},
+                    annot_kws={'size': 16, 'font': 'computer modern'},
                     cbar_kws={'label': 'Corrected P-value'},
                     linewidths=.5,
                     linecolor='black',
                     xticklabels=contingency_table.index, yticklabels=contingency_table.index,
+                    ax=ax,
                     # mask=mask[1:, :-1],
                     )
         # sns.heatmap(corrected_p_value_matrix[1:, :-1], annot=True, fmt='.4f', cbar=False, 
@@ -188,6 +190,11 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
             title = 'Interface Fluid'
         elif col == 'vignette':
             title = 'Vignette'
+        
+        if title_suffix == 'train set':
+            fname_suffix = 'train_set'
+        elif title_suffix == 'test set':
+                fname_suffix = 'test_set'
         plt.title(f"{title} in " + title_suffix, fontsize=16)
         # plt.xlabel("Class", fontsize=14)
         # plt.ylabel("Class", fontsize=14)
@@ -196,7 +203,7 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
         plt.tick_params(axis='both', which='both', length=0)
         plt.tight_layout()
         plt.show()
-        fig.savefig(f'./figures/{test_column}_post_hoc_{title_suffix}.png', pad_inches=0, dpi=600)
+        fig.savefig(f'./figures2/{test_column}_post_hoc_{fname_suffix}.eps', pad_inches=0)
 
     else:
         print(f"\nNo significant difference found in the initial Chi-Squared test for '{test_column}'.")
