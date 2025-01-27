@@ -14,7 +14,11 @@ from model import DeepRadiomicsClassifier, RadiomicsClassifier, ImageClassifier
 import random
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
 
+plt.rcParams['text.usetex'] = True
+plt.rcParams['font.family'] = 'Gulliver'
 # with hair
 # paths = ['model_fold_0_f667fabfa1c747bc85e49b1e0b7dfe3e',
 #          'model_fold_1_dbca0643b5054fe9a7d77ac2f0dcb86e',
@@ -230,11 +234,13 @@ melted_df['predicted_class'] = melted_df.apply(
 
 # Plot the boxplot for both hair and no hair predictions
 plt.figure(figsize=(8, 6))
-sns.boxplot(x='predicted_class', y='entropy', hue='condition', data=melted_df)
+ax = sns.boxplot(x='predicted_class', y='entropy', hue='condition',
+                 data=melted_df, fill=True, linewidth=.5, linecolor='black',
+                 medianprops={'color': 'red', 'linewidth': 3})
 plt.xlabel('Predicted Class')
 plt.ylabel('Entropy')
 plt.legend(title='condition', loc='best')
-plt.title('Entropy Distribution by Predicted Class (with and without hair)', fontsize=14)
+# plt.title('Entropy Distribution by Predicted Class (with and without hair)', fontsize=14)
 # plt.title('Entropy Distribution by Ground Truth (with and without hair)', fontsize=14)
 plt.gca().spines['top'].set_visible(False)
 plt.gca().spines['right'].set_visible(False)
@@ -244,12 +250,33 @@ plt.grid(axis='y', linestyle=':', alpha=0.8)
 plt.gca().yaxis.set_ticks_position('none')
 plt.gca().xaxis.set_ticks_position('none')
 plt.xlabel('')
-plt.ylabel('')
-plt.gca().tick_params(axis='both', which='major', labelsize=12)
+plt.ylabel('Entropy', fontsize=16)
+plt.gca().tick_params(axis='both', which='major', labelsize=16)
 handles, labels = plt.gca().get_legend_handles_labels()
 plt.legend(handles[:2], ['Hair', 'No Hair'], loc='upper right')
+
+import matplotlib as mpl
+from matplotlib.lines import Line2D
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+
+for patch in ax.patches:
+    patch.set_facecolor('white')
+bars = ax.patches
+hatches = ['//'] * 7 + [' '] * 7  # 7h 7nh
+for pat, bar in zip(hatches, bars):
+    bar.set_hatch(pat)
+legend_handles = [
+    mpatches.Patch(facecolor='none', edgecolor='black', hatch='//', label='No'),
+    mpatches.Patch(facecolor='none', edgecolor='black', hatch=' ', label='Yes')
+]
+median_line = mlines.Line2D([], [], color='red', linewidth=2, label='Median')
+# legend_handles.append(median_line)
+plt.legend(handles=legend_handles, title='Hair removal applied',
+           loc='best', fontsize=12, title_fontsize=14, ncol=3)
+
 plt.tight_layout(rect=[0, 0, 1, 0.96], h_pad=3.0)
-plt.savefig('entropy_distribution.png', dpi=300)
+plt.savefig('./figures/entropy_distribution.eps', format='eps')
 plt.show()
 # %%
 hair_predictions = np.argmax(hair_results[0], axis=1) + 7
@@ -343,96 +370,99 @@ sankey_fig.update_traces(textfont=dict(
     ))
 
 # Manually add annotations to place labels inside the nodes
+fam = 'Gulliver'
 annotations = [
     dict(
         x=0.001, y=1.002,
-        text="akiec gt", showarrow=False, font=dict(size=25, color="white")
+        text="akiec gt", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
         x=0.5, y=1.005,
-        text="akiec h", showarrow=False, font=dict(size=25, color="white")
+        text="akiec h", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
         x=1., y=1.002,
-        text="akiec nh", showarrow=False, font=dict(size=25, color="white")
+        text="akiec nh", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
         x=0.004, y=0.915,
-        text="bcc gt", showarrow=False, font=dict(size=25, color="black")
+        text="bcc gt", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
         x=0.5, y=0.92,
-        text="bcc h", showarrow=False, font=dict(size=25, color="black")
+        text="bcc h", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
         x=0.994, y=0.917,
-        text="bcc nh", showarrow=False, font=dict(size=25, color="black")
+        text="bcc nh", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
         x=0.005, y=0.795,
-        text="bkl gt", showarrow=False, font=dict(size=25, color="black")
+        text="bkl gt", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
         x=0.5, y=0.785,
-        text="bkl h", showarrow=False, font=dict(size=25, color="black")
+        text="bkl h", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
         x=0.993, y=0.79,
-        text="bkl nh", showarrow=False, font=dict(size=25, color="black")
+        text="bkl nh", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
         x=0.005, y=0.678,
-        text="df gt", showarrow=False, font=dict(size=25, color="black")
+        text="df gt", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
         x=0.5, y=0.644,
-        text="df h", showarrow=False, font=dict(size=23, color="black")
+        text="df h", showarrow=False, font=dict(size=23, color="black", family=fam)
     ),
     dict(
         x=0.99, y=0.655,
-        text="df nh", showarrow=False, font=dict(size=25, color="black")
+        text="df nh", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
         x=0.003, y=0.565,
-        text="mel gt", showarrow=False, font=dict(size=25, color="white")
+        text="mel gt", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
         x=0.5, y=0.53,
-        text="mel h", showarrow=False, font=dict(size=23, color="white")
+        text="mel h", showarrow=False, font=dict(size=23, color="white", family=fam)
     ),
     dict(
         x=0.994, y=0.545,
-        text="mel nh", showarrow=False, font=dict(size=25, color="white")
+        text="mel nh", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
         x=0.005, y=0.26,
-        text="nv gt", showarrow=False, font=dict(size=25, color="black")
+        text="nv gt", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
         x=0.5, y=0.24,
-        text="nv h", showarrow=False, font=dict(size=23, color="black")
+        text="nv h", showarrow=False, font=dict(size=23, color="black", family=fam)
     ),
     dict(
         x=0.991, y=0.25,
-        text="nv nh", showarrow=False, font=dict(size=25, color="black")
+        text="nv nh", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
         x=0.001, y=-0.002,
-        text="vasc gt", showarrow=False, font=dict(size=25, color="white")
+        text="vasc gt", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
         x=0.5, y=-0.002,
-        text="vasc h", showarrow=False, font=dict(size=23, color="white")
+        text="vasc h", showarrow=False, font=dict(size=23, color="white", family=fam)
     ),
     dict(
         x=0.999, y=-0.004,
-        text="vasc nh", showarrow=False, font=dict(size=25, color="white")
+        text="vasc nh", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
 
 
 ]
 sankey_fig.update_layout(annotations=annotations)
-sankey_fig.update_layout(title_text="Sankey Diagram (Ground Truth ↦ Hair ↦ No Hair)", font_size=35, title_x=0.5)
-sankey_fig.write_image('sankey_diagram.png', width=2400, height=1600)
+sankey_fig.update_layout(title_text="Sankey Diagram (Ground Truth ↦ Hair ↦ No Hair)", title_x=0.5, font=dict(size=35, color="black", family=fam))
+sankey_fig.write_image('./figures/sankey_diagram.png', width=2400, height=1600)
+# sankey_fig.show()
+# sankey_fig.write_image('/figures/sankey_diagram.svg')
 # %%
 
