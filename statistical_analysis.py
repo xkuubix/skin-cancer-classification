@@ -47,6 +47,11 @@ df[cols] = df[cols].astype(int)
 df['other'] = df['frame'] | df['other']
 df.drop(columns=['frame'], inplace=True)
 cols =  ['hair', 'ruler_marks', 'bubbles', 'vignette', 'other']
+
+if to_analyze == 'train':
+    df.to_csv('HAM10000_metadata_with_artefacts_labels.csv', index=False)
+elif to_analyze == 'test':
+    df.to_csv('ISIC2018_Task3_Test_GroundTruth_with_artefacts_labels.csv', index=False)
 # %% VISUALIZATION
 counts = df.groupby('dx')[cols].agg(['sum', 'count'])
 counts.columns = ['_'.join(col) for col in counts.columns]
@@ -86,17 +91,17 @@ for i, ax in enumerate(axes):
         title = 'Vignette'
     if col == 'hair':
         title = 'Hair'
-        ax.set_ylim(0, 90)
+        ax.set_ylim(0, 100)
     elif col == 'ruler_marks':
         title = 'Ruler Marks'
-        ax.set_ylim(0, 45)
+        ax.set_ylim(0, 100)
     elif col == 'bubbles':
         title = 'Interface Fluid'
-        ax.set_ylim(0, 35)
+        ax.set_ylim(0, 100)
     elif col == 'vignette':
         title = 'Vignette'
-        ax.set_ylim(0, 30)
-    ax.set_title(title, fontsize=14)
+        ax.set_ylim(0, 100)
+    ax.set_title(title, fontsize=22)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)
@@ -106,7 +111,12 @@ for i, ax in enumerate(axes):
     ax.xaxis.set_ticks_position('none')
     ax.set_xlabel('')
     ax.set_ylabel('')
-    ax.tick_params(axis='both', which='major', labelsize=12)
+    if title == 'Hair':
+        ax.set_ylabel('Occurrence [\%]', fontsize=20)
+        ax.tick_params(axis='both', which='major', labelsize=19)
+    else:
+        ax.tick_params(axis='x', which='major', labelsize=19)
+        ax.set_yticklabels([])
 
 # plt.suptitle(f'Occurrence by category in {title_suffix} [%]', fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.96], h_pad=3.0)
@@ -169,16 +179,23 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
         # redundant row and col deleted
         # fig = plt.figure(figsize=(6, 6))
         fig, ax = plt.subplots(figsize=(6, 6))
-        sns.heatmap(corrected_p_value_matrix, annot=True, fmt='.2f', cbar=False,
+        def custom_formatter(value):
+            if value == 1.00:
+                return '1'  # Display as '1'
+            return f'{value:.2f}'[1:]  # Display as '.xx' for values < 1.00
+
+        # Apply the custom formatter to all values in the matrix
+        annot = np.vectorize(custom_formatter)(corrected_p_value_matrix)
+
+        # Plot heatmap with custom annotations
+        sns.heatmap(corrected_p_value_matrix, annot=annot, fmt='', cbar=False,
                     cmap='gray', square=True,
-                    annot_kws={'size': 16, 'font': 'computer modern'},
+                    annot_kws={'size': 24, 'font': 'computer modern'},
                     cbar_kws={'label': 'Corrected P-value'},
                     linewidths=.5,
                     linecolor='black',
                     xticklabels=contingency_table.index, yticklabels=contingency_table.index,
-                    ax=ax,
-                    # mask=mask[1:, :-1],
-                    )
+                    ax=ax)
         # sns.heatmap(corrected_p_value_matrix[1:, :-1], annot=True, fmt='.4f', cbar=False, 
         #             cmap='gray', square=True,
         #             xticklabels=contingency_table.index[:-1], yticklabels=contingency_table.index[1:],
@@ -197,15 +214,15 @@ def chi_squared_post_hoc(df, test_column, significance_threshold=0.05):
             fname_suffix = 'train_set'
         elif title_suffix == 'test set':
                 fname_suffix = 'test_set'
-        plt.title(f"{title} in " + title_suffix, fontsize=16)
+        # plt.title(f"{title} in " + title_suffix, fontsize=17)
         # plt.xlabel("Class", fontsize=14)
         # plt.ylabel("Class", fontsize=14)
-        plt.xticks(rotation=0, fontsize=16)
-        plt.yticks(rotation=0, fontsize=16)
+        plt.xticks(rotation=0, fontsize=20)
+        plt.yticks(rotation=0, fontsize=20)
         plt.tick_params(axis='both', which='both', length=0)
         plt.tight_layout()
         plt.show()
-        fig.savefig(f'./figures2/{test_column}_post_hoc_{fname_suffix}.png', pad_inches=0, dpi=600)
+        fig.savefig(f'./figures2/{test_column}_post_hoc_{fname_suffix}.eps', pad_inches=0, dpi=600)
 
     else:
         print(f"\nNo significant difference found in the initial Chi-Squared test for '{test_column}'.")
