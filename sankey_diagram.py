@@ -255,11 +255,6 @@ plt.gca().tick_params(axis='both', which='major', labelsize=16)
 handles, labels = plt.gca().get_legend_handles_labels()
 plt.legend(handles[:2], ['Hair', 'No Hair'], loc='upper right')
 
-import matplotlib as mpl
-from matplotlib.lines import Line2D
-import matplotlib.patches as mpatches
-import matplotlib.lines as mlines
-
 for patch in ax.patches:
     patch.set_facecolor('white')
 bars = ax.patches
@@ -301,7 +296,7 @@ df = pd.DataFrame({
 
 contingency_table = pd.crosstab([df['Ground Truth'], df['Prediction 1']], df['Prediction 2'])
 print(contingency_table)
-total_samples = contingency_table.sum().sum()
+total_samples = contingency_table.sum()#.sum()
 normalized_contingency_table = contingency_table / total_samples
 print(normalized_contingency_table)
 
@@ -346,14 +341,14 @@ print(links_df)
 # link_colors = [colors[i % 7] for i in range(len([link['source'] for link in links]))]
 
 sankey_fig = go.Figure(go.Sankey(
-    arrangement='snap',
+    arrangement='snap', # ['snap', 'perpendicular', 'freeform', 'fixed']
+
     node=dict(
         # color=['blue', 'green', 'red', 'purple', 'orange', 'pink', 'brown']
         color = colors * 3,
-        pad=80,
+        pad=10,
         thickness=100,
         line=dict(color="black", width=3),
-        # label=labels,
 
     ),
     link=dict(
@@ -381,67 +376,67 @@ annotations = [
         text="akiec h", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
-        x=1., y=1.002,
+        x=1., y=0.944,
         text="akiec nh", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
-        x=0.004, y=0.915,
+        x=0.004, y=0.95,
         text="bcc gt", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
-        x=0.5, y=0.92,
+        x=0.5, y=0.955,
         text="bcc h", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
-        x=0.994, y=0.917,
+        x=0.994, y=0.99,
         text="bcc nh", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
-        x=0.005, y=0.795,
+        x=0.005, y=0.845,
         text="bkl gt", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
-        x=0.5, y=0.785,
+        x=0.5, y=0.825,
         text="bkl h", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
-        x=0.993, y=0.79,
+        x=0.99, y=0.84,
         text="bkl nh", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
-        x=0.005, y=0.678,
+        x=0.005, y=0.031,
         text="df gt", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
-        x=0.5, y=0.644,
-        text="df h", showarrow=False, font=dict(size=23, color="black", family=fam)
+        x=0.5, y=0.025,
+        text="df h", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
-        x=0.99, y=0.655,
+        x=0.99, y=0.0255,
         text="df nh", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
-        x=0.003, y=0.565,
+        x=0.003, y=0.11,
         text="mel gt", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
-        x=0.5, y=0.53,
-        text="mel h", showarrow=False, font=dict(size=23, color="white", family=fam)
+        x=0.5, y=0.12,
+        text="mel h", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
-        x=0.994, y=0.545,
+        x=0.99, y=0.11,
         text="mel nh", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
-        x=0.005, y=0.26,
+        x=0.005, y=0.5,
         text="nv gt", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
-        x=0.5, y=0.24,
-        text="nv h", showarrow=False, font=dict(size=23, color="black", family=fam)
+        x=0.5, y=0.5,
+        text="nv h", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
-        x=0.991, y=0.25,
+        x=0.991, y=0.5,
         text="nv nh", showarrow=False, font=dict(size=25, color="black", family=fam)
     ),
     dict(
@@ -450,7 +445,7 @@ annotations = [
     ),
     dict(
         x=0.5, y=-0.002,
-        text="vasc h", showarrow=False, font=dict(size=23, color="white", family=fam)
+        text="vasc h", showarrow=False, font=dict(size=25, color="white", family=fam)
     ),
     dict(
         x=0.999, y=-0.004,
@@ -459,10 +454,10 @@ annotations = [
 
 
 ]
-sankey_fig.update_layout(annotations=annotations)
-sankey_fig.update_layout(title_text="Sankey Diagram (Ground Truth ↦ Hair ↦ No Hair)", title_x=0.5, font=dict(size=35, color="black", family=fam))
-sankey_fig.write_image('./figures/sankey_diagram.png', width=2400, height=1600)
+sankey_fig.update_layout(annotations=annotations, width=1650, height=1200)
+# sankey_fig.update_layout(title_text="Sankey Diagram (Ground Truth ↦ Hair ↦ No Hair)", title_x=0.5, font=dict(size=35, color="black", family=fam))
 # sankey_fig.show()
-# sankey_fig.write_image('/figures/sankey_diagram.svg')
+sankey_fig.write_image('./figures/sankey_diagram.png')
+# sankey_fig.write_image('./figures/sankey_diagram.svg')
 # %%
 
