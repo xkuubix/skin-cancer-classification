@@ -14,6 +14,9 @@ dir:
   # seg_test:    '/media/dysk_a/jr_buler/HAM10000/test/new/ISIC2018_Task3_Test_Images_Segmentations_trained_on_HAM_no_hair/'  
   # img_test:    '/media/dysk_a/jr_buler/HAM10000/test/new/ISIC2018_Task3_Test_Images_no_hair/'
   
+  new_metadata:      '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_metadata_new.csv'
+  new_metadata_test: '/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_GroundTruth_new.csv'
+
   csv:         '/media/dysk_a/jr_buler/HAM10000/train/HAM10000_metadata'
   csv_test:    '/media/dysk_a/jr_buler/HAM10000/test/ISIC2018_Task3_Test_GroundTruth.csv'
   pkl_train:   '/media/dysk_a/jr_buler/HAM10000/my_pickle/train_radiomic_features.pkl'
@@ -21,6 +24,8 @@ dir:
   pkl_test:    '/media/dysk_a/jr_buler/HAM10000/my_pickle/test_radiomic_features.pkl'
   inf:         '/media/dysk_a/jr_buler/HAM10000/my_pickle/info.txt'
   models:      '/media/dysk_a/jr_buler/HAM10000/models/'
+  results:     '/media/dysk_a/jr_buler/HAM10000/results/'
+  results2:     '/media/dysk_a/jr_buler/HAM10000/results2/'
 
 dataset:
   mode: 'hybrid' # images, radiomics, hybrid
