@@ -19,6 +19,8 @@ from captum.attr import IntegratedGradients
 from captum.attr import visualization as viz
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patheffects import withStroke
+plt.rcParams['text.usetex'] = True
+plt.rcParams['font.family'] = 'Gulliver'
 
 def tabular_explanations(finfo, attributions, ax):
     feature_names = finfo['selected_features']
@@ -47,18 +49,19 @@ def tabular_explanations(finfo, attributions, ax):
                 dodge=False,
                 gap=0
                 )
+    
     handles = [plt.Rectangle((0, 0), 1, 1, color=color) for color in ['darkgray', 'orangered', 'lawngreen', 'cornflowerblue']]
     labels = ['Grayscale', 'Red', 'Green', 'Blue']
-    ax.legend(handles, labels, title='Channel', loc='best', fontsize=16, title_fontsize=18)
+    ax.legend(handles, labels, title='Channel', loc='best', fontsize=19, title_fontsize=20)
     for i, feature in enumerate(plot_features):
         # ax.text(plot_scores[i], i, f' {feature}', va='center') # start outside right
         if feature.endswith('_b'):
             color = 'black'
         else:
             color = 'black'
-        ax.text(0, i, f' {feature}', va='center',
+        ax.text(0.005, i, f' {feature}', va='center',
                 color=color,  # Font color
-                fontsize=13,  # Font size
+                fontsize=17,  # Font size
                 path_effects=[
                 withStroke(linewidth=0, foreground='black')  # Outline effect
                 ]) # start inside bars
@@ -66,6 +69,7 @@ def tabular_explanations(finfo, attributions, ax):
         plt.gca().spines['right'].set_visible(False)
         plt.gca().spines['left'].set_visible(False)
         plt.gca().spines['bottom'].set_visible(False)
+
 
 def plot_attr(data, attributions, pred, prob, finfo):
     path = data['img_path']
@@ -128,7 +132,9 @@ def plot_attr(data, attributions, pred, prob, finfo):
                                  )
     tabular_explanations(finfo, attributions, ax[4])
     ax[4].set_title(f'Top {10} Important Radiomics')
-    ax[4].set_xlabel('Importance Score', fontsize=14)
+    ax[4].set_xlabel('Importance Score', fontsize=25)
+    ax[4].tick_params(axis='x', labelsize=20)
+
     for spine in ax[2].spines.values():
         spine.set_color('black')
         spine.set_linewidth(1)
@@ -141,11 +147,13 @@ def plot_attr(data, attributions, pred, prob, finfo):
     ax[4].grid(axis='x', linestyle='-', linewidth=1, zorder=0)
 
     for a in ax:
-        a.title.set_fontsize(16)
+        a.title.set_fontsize(25)
+        plt.xticks(fontsize=20, rotation=0)
 
-    fig.suptitle(f'ID: {id} | Ground-Truth: {data["label_str"][0]} | Prediction: {pred.lower()}, p={prob}', fontsize=20)
+    fig.suptitle(f'ID: {id} | Ground-Truth: {data["label_str"][0]} | Prediction: {pred.lower()}, p={prob}',
+                 fontsize=30)
     fig.tight_layout()
-    plt.close()
+    # plt.close()
     return fig
 
 # dev
@@ -262,6 +270,24 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
             radiomic_features = data['features'].to(device)
         else:
             radiomic_features = None
+
+        id = data['img_path'][0].split('/')[-1].split('.')[0]
+
+        if id not in [
+            'ISIC_0034693',
+            'ISIC_0034734',
+            'ISIC_0034790',
+            'ISIC_0034997',
+            'ISIC_0035093',
+            'ISIC_0035224',
+            'ISIC_0035263',
+            'ISIC_0035310',
+            'ISIC_0035395',
+            'ISIC_0035886',
+            'ISIC_0035944'
+            ]:
+            continue
+
         # target_idx = data['label'].to(device)
         image_baseline = torch.rand(image.size()).to(device)
         # image_baseline = torch.zeros_like(image).to(device)
@@ -281,8 +307,9 @@ for fold_index, (train_indices, val_indices) in enumerate(kf.split(df, df['dx'])
         pred = next((k for k, v in mapping_handler.items() if v == pred), None)
         fig = plot_attr(data, attributions, pred, prob, finfo)
         id = data['img_path'][0].split('/')[-1].split('.')[0]
-        # path = config['dir']['results'] + f'no_hair/{id}_attr.png'
-        path = config['dir']['results'] + f'hair/{id}_attr.png'
+        ####### path = config['dir']['results'] + f'no_hair/{id}_attr.png'
+        path = config['dir']['results2'] + f'hair/{id}_attr.eps'
+        # path = config['dir']['results2'] + f'no_hair/{id}_attr.eps'
         fig.savefig(path)
         i += 1
         print(f'{i}/1511')
