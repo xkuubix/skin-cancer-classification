@@ -240,8 +240,6 @@ ax = sns.boxplot(x='predicted_class', y='entropy', hue='condition',
 plt.xlabel('Predicted Class')
 plt.ylabel('Entropy')
 plt.legend(title='condition', loc='best')
-# plt.title('Entropy Distribution by Predicted Class (with and without hair)', fontsize=14)
-# plt.title('Entropy Distribution by Ground Truth (with and without hair)', fontsize=14)
 plt.gca().spines['top'].set_visible(False)
 plt.gca().spines['right'].set_visible(False)
 plt.gca().spines['left'].set_visible(False)
@@ -455,7 +453,6 @@ annotations = [
 
 ]
 sankey_fig.update_layout(annotations=annotations, width=1650, height=1200)
-# sankey_fig.update_layout(title_text="Sankey Diagram (Ground Truth ↦ Hair ↦ No Hair)", title_x=0.5, font=dict(size=35, color="black", family=fam))
 # sankey_fig.show()
 sankey_fig.write_image('./figures/sankey_diagram.png')
 # sankey_fig.write_image('./figures/sankey_diagram.svg')
